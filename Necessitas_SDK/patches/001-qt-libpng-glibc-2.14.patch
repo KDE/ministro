@@ -1,0 +1,11 @@
+--- qt-everywhere-opensource-src-4.7.3/src/3rdparty/libpng/pngconf.h.ark	2011-06-17 17:46:32.816391891 +0000
++++ qt-everywhere-opensource-src-4.7.3/src/3rdparty/libpng/pngconf.h	2011-06-17 17:47:27.853057654 +0000
+@@ -357,7 +357,7 @@
+ #        define PNG_SAVE_BSD_SOURCE
+ #        undef _BSD_SOURCE
+ #      endif
+-#      ifdef _SETJMP_H
++#      if 0//def _SETJMP_H
+        /* If you encounter a compiler error here, see the explanation
+         * near the end of INSTALL.
+         */

@@ -169,6 +169,9 @@ function prepareHostQt
         then
             tar -xzvf $HOST_QT_VERSION.tar.gz || error_msg "Can't untar $HOST_QT_VERSION.tar.gz"
         fi
+        for i in $REPO_SRC_PATH/patches/*-qt-*.patch; do
+            patch -p0 <$i
+        done
     fi
 
     #build qt statically, needed by Sdk installer
