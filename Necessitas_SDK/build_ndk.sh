@@ -78,7 +78,7 @@ function makeInstallPython
         ./build-python.sh
         PYTHONVER=$PWD/install-python-$BUILD
         # If successful, the build is packaged into /usr/ndk-build/python-mingw.7z
-        cp ../python-${BUILD}.7z $REPO_SRC_PATH/
+        cp ../../python-${BUILD}.7z $REPO_SRC_PATH/
         cd ..
     fi
 }
