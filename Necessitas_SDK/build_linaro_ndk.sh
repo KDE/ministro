@@ -177,18 +177,21 @@ function makeNDK
 
     if [ ! -d "mpfr" ]
     then
-        git clone git://android.git.kernel.org/toolchain/mpfr.git mpfr || error_msg "Can't clone mpfr"
+#        git clone git://android.git.kernel.org/toolchain/mpfr.git mpfr || error_msg "Can't clone mpfr"
+        git clone git://git.linaro.org/people/bernhardrosenkranzer/mpfr.git mpfr || error_msg "Can't clone mpfr"
         pushd mpfr
         downloadIfNotExists mpfr-2.4.2.tar.bz2 http://www.mpfr.org/mpfr-2.4.2/mpfr-2.4.2.tar.bz2
         popd
     fi
     if [ ! -d "binutils" ]
     then
-        git clone git://android.git.kernel.org/toolchain/binutils.git binutils || error_msg "Can't clone binutils"
+#        git clone git://android.git.kernel.org/toolchain/binutils.git binutils || error_msg "Can't clone binutils"
+        git clone git://git.linaro.org/people/bernhardrosenkranzer/binutils.git binutils || error_msg "Can't clone binutils"
     fi
     if [ ! -d "gmp" ]
     then
-        git clone git://android.git.kernel.org/toolchain/gmp.git gmp || error_msg "Can't clone gmp"
+#        git clone git://android.git.kernel.org/toolchain/gmp.git gmp || error_msg "Can't clone gmp"
+        git clone git://git.linaro.org/people/bernhardrosenkranzer/gmp.git gmp || error_msg "Can't clone gmp"
     fi
 
     if [ ! -d "gmp/gmp-4.3.2" ]
@@ -199,18 +202,18 @@ function makeNDK
         popd
     fi
 
-    if [ ! -d "gold" ]
-    then
-        git clone git://android.git.kernel.org/toolchain/gold.git gold || error_msg "Can't clone gold"
-    fi
+#    if [ ! -d "gold" ]
+#    then
+#        git clone git://android.git.kernel.org/toolchain/gold.git gold || error_msg "Can't clone gold"
+#    fi
+
     if [ ! -d "build" ]
     then
         git clone git://gitorious.org/toolchain-mingw-android/mingw-android-toolchain-build.git build || error_msg "Can't clone build"
-        git reset --hard
     fi
     # reset so that ndk r6b patches apply.
     pushd build
-#        git reset --hard
+#    git reset --hard
     popd
 
     if [ ! -d "mpc" ]
@@ -235,7 +238,7 @@ function makeNDK
     then
         mkdir cloog
         pushd cloog
-        downloadIfNotExists cloog-0.16.3.tar.gz http://www.bastoul.net/cloog/pages/download/count.php3?url=./cloog-0.16.3.tar.gz
+        downloadIfNotExists cloog-0.16.3.tar.gz http://www.bastoul.net/cloog/pages/download/cloog-0.16.3.tar.gz
         tar xzvf cloog-0.16.3.tar.gz
         popd
     fi
@@ -259,7 +262,7 @@ function makeNDK
         fi
 #        GCCREPO=git://android.git.linaro.org/toolchain/gcc.git
         rm -rf /tmp/ndk-tc-patches/gcc/*
-	if [ "GCC_NEEDS_PATCHING" = "1" ] ; then
+        if [ "$GCC_NEEDS_PATCHING" = "1" ] ; then
 	    cp $NDK/build/tools/toolchain-patches-linaro-4.6-android-and-win32/*.patch /tmp/ndk-tc-patches/gcc
 	fi
     else
@@ -405,6 +408,8 @@ fi
 
 if [ "$OSTYPE" = "linux-gnu" ]; then
     TEMP_PATH=/usr/ndk-build
+    sudo mkdir -p $TEMP_PATH
+    sudo chown `whoami` $TEMP_PATH
 else
     TEMP_PATH=/usr/ndk-build
     if [ "$OSTYPE" = "darwin9.0" -o "$OSTYPE" = "darwin10.0" ] ; then
