@@ -118,20 +118,49 @@ function makeNDKForArch
     else
         ARCH_ABI=$ARCH
     fi
-#    if [ ! -f $ROOTDIR/${ARCH_ABI}-4.4.3-gdbserver.tar.bz2 -o ! -f $ROOTDIR/${ARCH_ABI}-4.4.3-${BUILD_NDK}.tar.bz2 ]; then
-    if [ ! -f $ROOTDIR/${ARCH_ABI}-4.4.3-${BUILD_NDK}.tar.bz2 ]; then
-        $NDK/build/tools/rebuild-all-prebuilt.sh --arch=$ARCH --patches-dir=/tmp/ndk-tc-patches --build-dir=$ROOTDIR/ndk-toolchain-${BUILD}-build-tmp --verbose --package-dir=$ROOTDIR --gcc-path=$GCC_ROOT_PATH --gdb-path=$GDB_ROOT_PATH --gdb-version=$GDB_VER --mpfr-version=2.4.2 --gmp-version=4.2.4 --binutils-version=2.20.1 --toolchain-src-dir=$TCSRC --gdb-with-python=$PYTHONVER
+#    if [ ! -f $ROOTDIR/${ARCH_ABI}-$GCC_VER-gdbserver.tar.bz2 -o ! -f $ROOTDIR/${ARCH_ABI}-${GCC_VER}-${BUILD_NDK}.tar.bz2 ]; then
+echo NDK is $NDK
+echo NDK is $NDK
+echo NDK is $NDK
+echo NDK is $NDK
+echo NDK is $NDK
+    if [ ! -f $ROOTDIR/${ARCH_ABI}-${GCC_VER}-${BUILD_NDK}.tar.bz2 ]; then
+        $NDK/build/tools/rebuild-all-prebuilt.sh --arch=$ARCH --patches-dir=/tmp/ndk-tc-patches --build-dir=$ROOTDIR/ndk-toolchain-${BUILD}-build-tmp --verbose --package-dir=$ROOTDIR --gcc-version=$GCC_VER --gdb-path=$GDB_ROOT_PATH --gdb-version=$GDB_VER --mpfr-version=2.4.2 --gmp-version=4.3.2 --binutils-version=2.20.1 --toolchain-src-dir=$TCSRC --gdb-with-python=$PYTHONVER
     else
         echo "Skipping NDK build, already done."
-        echo $ROOTDIR/${ARCH_ABI}-4.4.3-${BUILD_NDK}.tar.bz2
+        echo $ROOTDIR/${ARCH_ABI}-${GCC_VER}-${BUILD_NDK}.tar.bz2
     fi
-    cp $ROOTDIR/${ARCH_ABI}-4.4.3-${BUILD_NDK}.tar.bz2 $REPO_SRC_PATH/${ARCH_ABI}-4.4.3-${BUILD_NDK}.tar.bz2
-    cp $ROOTDIR/${ARCH_ABI}-4.4.3-gdbserver.tar.bz2 $REPO_SRC_PATH/${ARCH_ABI}-4.4.3-gdbserver.tar.bz2
+    cp $ROOTDIR/${ARCH_ABI}-${GCC_VER}-${BUILD_NDK}.tar.bz2 $REPO_SRC_PATH/${ARCH_ABI}-${GCC_VER}-${BUILD_NDK}.tar.bz2
+    cp $ROOTDIR/${ARCH_ABI}-${GCC_VER}-gdbserver.tar.bz2 $REPO_SRC_PATH/${ARCH_ABI}-${GCC_VER}-gdbserver.tar.bz2
 }
 
 function makeNDK
 {
     PYTHONVER=`pwd`/Python-2.7.1/python-build/install-python-${BUILD_PYTHON}
+
+    mkdir build-${BUILD_NDK}
+    pushd build-${BUILD_NDK}
+        if [ ! -d "development" ]
+        then
+         env GIT_SSL_NO_VERIFY=true git clone https://github.com/android/platform_development.git development || error_msg "Can't clone development"
+#        git clone git://android.git.kernel.org/platform/development.git development || error_msg "Can't clone development"
+        fi
+        if [ ! -d "ndk" ]
+        then
+        git clone git://gitorious.org/mingw-android-ndk/mingw-android-ndk.git ndk || error_msg "Can't clone ndk"
+    fi
+    pushd ndk
+        git checkout -b integration origin/integration
+    popd
+    echo NDK is $NDK
+    echo NDK is $NDK
+    echo NDK is $NDK
+    echo NDK is $NDK
+    echo NDK is $NDK
+    export NDK=$PWD/ndk
+    export ANDROID_NDK_ROOT=$NDK
+    popd
+
     mkdir src
     pushd src
 #   PYTHONVER=$PWD/python-install
@@ -161,6 +190,15 @@ function makeNDK
     then
         git clone git://android.git.kernel.org/toolchain/gmp.git gmp || error_msg "Can't clone gmp"
     fi
+
+    if [ ! -d "gmp/gmp-4.3.2" ]
+    then
+        pushd gmp
+        downloadIfNotExists gmp-4.3.2.tar.bz2 ftp://ftp.gnu.org/gnu/gmp/gmp-4.3.2.tar.bz2
+        tar xjvf gmp-4.3.2.tar.bz2
+        popd
+    fi
+
     if [ ! -d "gold" ]
     then
         git clone git://android.git.kernel.org/toolchain/gold.git gold || error_msg "Can't clone gold"
@@ -170,33 +208,78 @@ function makeNDK
         git clone git://gitorious.org/toolchain-mingw-android/mingw-android-toolchain-build.git build || error_msg "Can't clone build"
         git reset --hard
     fi
+    # reset so that ndk r6b patches apply.
+    pushd build
+#        git reset --hard
+    popd
+
+    if [ ! -d "mpc" ]
+    then
+        mkdir mpc
+        pushd mpc
+        downloadIfNotExists mpc-0.9.tar.gz http://www.multiprecision.org/mpc/download/mpc-0.9.tar.gz
+        tar xzvf mpc-0.9.tar.gz
+        popd
+    fi
+
+    if [ ! -d "ppl" ]
+    then
+        mkdir ppl
+        pushd ppl
+        downloadIfNotExists ppl-0.11.2.tar.bz2 ftp://ftp.cs.unipr.it/pub/ppl/releases/0.11.2/ppl-0.11.2.tar.bz2
+        tar xjvf ppl-0.11.2.tar.bz2
+        popd
+    fi
+
+    if [ ! -d "cloog" ]
+    then
+        mkdir cloog
+        pushd cloog
+        downloadIfNotExists cloog-0.16.3.tar.gz http://www.bastoul.net/cloog/pages/download/count.php3?url=./cloog-0.16.3.tar.gz
+        tar xzvf cloog-0.16.3.tar.gz
+        popd
+    fi
+
     rm -rf /tmp/ndk-tc-patches
     mkdir /tmp/ndk-tc-patches || echo "Can't mkdir"
     cp -rf $NDK/build/tools/toolchain-patches/* /tmp/ndk-tc-patches
-    # reset so that ndk r6b patches apply.
-    pushd build
-        git reset --hard
-    popd
+
     if [ "$GCC_LINARO" = "1" ] ; then
-        GCCSRCDIR="linaro-gcc"
-        GCCREPO=git://android.git.linaro.org/toolchain/gcc.git
-        rm -rf /tmp/ndk-tc-patches/gcc
+	GCCSRCDIR="gcc"
+	rm -rf $GCCSRCDIR/gcc-4.6-2011.10
+        if [ ! -d $GCCSRCDIR/gcc-4.6-2011.10 ]
+	then
+	    mkdir $GCCSRCDIR
+	    pushd $GCCSRCDIR
+            downloadIfNotExists gcc-linaro-4.6-2011.10.tar.bz2 http://launchpad.net/gcc-linaro/4.6/4.6-2011.10/+download/gcc-linaro-4.6-2011.10.tar.bz2
+            tar xjvf gcc-linaro-4.6-2011.10.tar.bz2
+	    mv gcc-linaro-4.6-2011.10 gcc-4.6-2011.10
+	    popd
+	    GCC_NEEDS_PATCHING=1
+        fi
+#        GCCREPO=git://android.git.linaro.org/toolchain/gcc.git
+        rm -rf /tmp/ndk-tc-patches/gcc/*
+	if [ "GCC_NEEDS_PATCHING" = "1" ] ; then
+	    cp $NDK/build/tools/toolchain-patches-linaro-4.6-android-and-win32/*.patch /tmp/ndk-tc-patches/gcc
+	fi
     else
-        GCCSRCDIR="google-gcc"
+        GCCSRCDIR="gcc"
         GCCREPO=git://gitorious.org/toolchain-mingw-android/mingw-android-toolchain-gcc.git
+        if [ ! -d "$GCCSRCDIR" ]
+        then
+            git clone $GCCREPO $GCCSRCDIR || error_msg "Can't clone $GCCREPO -> $GCCSRCDIR"
+        fi
     fi
-    GCC_ROOT_PATH=$PWD/$GCCSRCDIR
-    if [ ! -d "$GCCSRCDIR" ]
-    then
-        git clone $GCCREPO $GCCSRCDIR || error_msg "Can't clone $GCCREPO -> $GCCSRCDIR"
-    fi
-    if [ "$GCCSRCDIR" = "linaro-gcc" ] ; then
-        git branch -D windows || echo "Windows branch didn't exist, not a problem."
-        git checkout -b windows
-        git am $LINARO_GCC_WINDOWS_PATCHES_DIR/*.patch
+    if [ "$GCC_LINARO" = "1" ] ; then
+        if [ -d .git ] ; then
+            git branch -D windows || echo "Windows branch didn't exist, not a problem."
+            git checkout -b windows
+            git am $NDK/build/tools/toolchain-patches-linaro-4.6-android-and-win32/*.patch
+            rm -rf /tmp/ndk-tc-patches/gcc
+        fi
     else
         # reset so that ndk r6b patches apply (usually this will undo the previously applied patches).
-        if [ "$GCCSRCDIR" = "gcc" ] ; then
+        if [ "$GCC_LINARO" = "0" ] ; then
             pushd $GCCSRCDIR
                 git reset --hard
                 git checkout --force integration
@@ -223,23 +306,9 @@ function makeNDK
     TCSRC=$PWD
     popd
 
-    mkdir build-${BUILD_NDK}
     pushd build-${BUILD_NDK}
-	if [ ! -d "development" ]
-	then
-         env GIT_SSL_NO_VERIFY=true git clone https://github.com/android/platform_development.git development || error_msg "Can't clone development"
-#        git clone git://android.git.kernel.org/platform/development.git development || error_msg "Can't clone development"
-	fi
-	if [ ! -d "ndk" ]
-	then
-        git clone git://gitorious.org/mingw-android-ndk/mingw-android-ndk.git ndk || error_msg "Can't clone ndk"
-    fi
-    pushd ndk
-        git checkout -b integration origin/integration
-    popd
-    export NDK=$PWD/ndk
-    export ANDROID_NDK_ROOT=$NDK
-    $NDK/build/tools/build-platforms.sh --arch="arm" --verbose
+
+#    $NDK/build/tools/build-platforms.sh --arch="arm" --verbose
 
     ROOTDIR=$PWD
     RELEASE=`date +%Y%m%d`
@@ -251,6 +320,8 @@ function makeNDK
     unset PYTHONHOME
     makeNDKForArch arm $ROOTDIR $REPO_SRC_PATH
     makeNDKForArch x86 $ROOTDIR $REPO_SRC_PATH
+
+    popd
 }
 
 # This also copies the new libstdc++'s over the old ones (the NDK's build scripts are
@@ -260,17 +331,17 @@ function mixPythonWithNDK
     if [ ! -f $REPO_SRC_PATH/python-${BUILD_PYTHON}.7z ]; then
        echo "Failed to find python, $REPO_SRC_PATH/python-${BUILD_PYTHON}.7z"
     fi
-    if [ ! -f $REPO_SRC_PATH/arm-linux-androideabi-4.4.3-gdbserver.tar.bz2 ]; then
-       echo "Failed to find arm gdbserver, $REPO_SRC_PATH/arm-linux-androideabi-4.4.3-gdbserver.tar.bz2"
+    if [ ! -f $REPO_SRC_PATH/arm-linux-androideabi-${GCC_VER}-gdbserver.tar.bz2 ]; then
+       echo "Failed to find arm gdbserver, $REPO_SRC_PATH/arm-linux-androideabi-${GCC_VER}-gdbserver.tar.bz2"
     fi
-    if [ ! -f $REPO_SRC_PATH/arm-linux-androideabi-4.4.3-${BUILD_NDK}.tar.bz2 ]; then
-       echo "Failed to find arm toolchain, $REPO_SRC_PATH/arm-linux-androideabi-4.4.3-${BUILD_NDK}.tar.bz2"
+    if [ ! -f $REPO_SRC_PATH/arm-linux-androideabi-${GCC_VER}-${BUILD_NDK}.tar.bz2 ]; then
+       echo "Failed to find arm toolchain, $REPO_SRC_PATH/arm-linux-androideabi-${GCC_VER}-${BUILD_NDK}.tar.bz2"
     fi
-    if [ ! -f $REPO_SRC_PATH/x86-4.4.3-gdbserver.tar.bz2 ]; then
-       echo "Failed to find x86 gdbserver, $REPO_SRC_PATH/x86-linux-androideabi-4.4.3-gdbserver.tar.bz2"
+    if [ ! -f $REPO_SRC_PATH/x86-${GCC_VER}-gdbserver.tar.bz2 ]; then
+       echo "Failed to find x86 gdbserver, $REPO_SRC_PATH/x86-linux-androideabi-${GCC_VER}-gdbserver.tar.bz2"
     fi
-    if [ ! -f $REPO_SRC_PATH/x86-4.4.3-${BUILD_NDK}.tar.bz2 ]; then
-       echo "Failed to find x86 toolchain, $REPO_SRC_PATH/x86-linux-androideabi-4.4.3-${BUILD_NDK}.tar.bz2"
+    if [ ! -f $REPO_SRC_PATH/x86-${GCC_VER}-${BUILD_NDK}.tar.bz2 ]; then
+       echo "Failed to find x86 toolchain, $REPO_SRC_PATH/x86-linux-androideabi-${GCC_VER}-${BUILD_NDK}.tar.bz2"
     fi
     mkdir -p /tmp/android-ndk-${NDK_VER}-${BUILD_NDK}-repack
     rm -rf /tmp/android-ndk-${NDK_VER}-${BUILD_NDK}-repack/android-ndk-${NDK_VER}
@@ -288,28 +359,28 @@ function mixPythonWithNDK
         fi
     fi
     pushd android-ndk-${NDK_VER}
-    tar -jxvf $REPO_SRC_PATH/arm-linux-androideabi-4.4.3-${BUILD_NDK}.tar.bz2
-    tar -jxvf $REPO_SRC_PATH/x86-4.4.3-${BUILD_NDK}.tar.bz2
+    tar -jxvf $REPO_SRC_PATH/arm-linux-androideabi-${GCC_VER}-${BUILD_NDK}.tar.bz2
+    tar -jxvf $REPO_SRC_PATH/x86-${GCC_VER}-${BUILD_NDK}.tar.bz2
     # The official NDK uses thumb version of libstdc++ for armeabi and
     # an arm version for armeabi-v7a, so copy the appropriate one over.
-    cp toolchains/arm-linux-androideabi-4.4.3/prebuilt/${BUILD_NDK}/arm-linux-androideabi/lib/thumb/libstdc++.* sources/cxx-stl/gnu-libstdc++/libs/armeabi/
-    cp toolchains/arm-linux-androideabi-4.4.3/prebuilt/${BUILD_NDK}/arm-linux-androideabi/lib/armv7-a/libstdc++.* sources/cxx-stl/gnu-libstdc++/libs/armeabi-v7a/
-    cp toolchains/x86-4.4.3/prebuilt/${BUILD_NDK}/i686-android-linux/lib/ibstdc++.* sources/cxx-stl/gnu-libstdc++/libs/x86/
-    tar -jxvf $REPO_SRC_PATH/arm-linux-androideabi-4.4.3-gdbserver.tar.bz2
-    tar -jxvf $REPO_SRC_PATH/x86-4.4.3-gdbserver.tar.bz2
-    if [ -d toolchains/arm-linux-androideabi-4.4.3/prebuilt/${BUILD_NDK} ] ; then
-        pushd toolchains/arm-linux-androideabi-4.4.3/prebuilt/${BUILD_NDK}
+    cp toolchains/arm-linux-androideabi-${GCC_VER}/prebuilt/${BUILD_NDK}/arm-linux-androideabi/lib/thumb/libstdc++.* sources/cxx-stl/gnu-libstdc++/libs/armeabi/
+    cp toolchains/arm-linux-androideabi-${GCC_VER}/prebuilt/${BUILD_NDK}/arm-linux-androideabi/lib/armv7-a/libstdc++.* sources/cxx-stl/gnu-libstdc++/libs/armeabi-v7a/
+    cp toolchains/x86-${GCC_VER}/prebuilt/${BUILD_NDK}/i686-android-linux/lib/ibstdc++.* sources/cxx-stl/gnu-libstdc++/libs/x86/
+    tar -jxvf $REPO_SRC_PATH/arm-linux-androideabi-${GCC_VER}-gdbserver.tar.bz2
+    tar -jxvf $REPO_SRC_PATH/x86-${GCC_VER}-gdbserver.tar.bz2
+    if [ -d toolchains/arm-linux-androideabi-${GCC_VER}/prebuilt/${BUILD_NDK} ] ; then
+        pushd toolchains/arm-linux-androideabi-${GCC_VER}/prebuilt/${BUILD_NDK}
             7za x $REPO_SRC_PATH/python-${BUILD_PYTHON}.7z
         popd
     fi
-    if [ -d toolchains/x86-4.4.3/prebuilt/${BUILD_NDK} ] ; then
-        pushd toolchains/x86-4.4.3/prebuilt/${BUILD_NDK}
+    if [ -d toolchains/x86-${GCC_VER}/prebuilt/${BUILD_NDK} ] ; then
+        pushd toolchains/x86-${GCC_VER}/prebuilt/${BUILD_NDK}
             7za x $REPO_SRC_PATH/python-${BUILD_PYTHON}.7z
         popd
     fi
     # Get rid of old and unused stuff.
     rm -rf toolchains/arm-eabi-4.4.0
-#    rm -rf toolchains/x86-4.4.3
+#    rm -rf toolchains/x86-${GCC_VER}
     popd
     7za a -mx9 android-ndk-${NDK_VER}-gdb-${GDB_VER}-${BUILD_NDK}.7z android-ndk-${NDK_VER}
     mv android-ndk-${NDK_VER}-gdb-${GDB_VER}-${BUILD_NDK}.7z $REPO_SRC_PATH
@@ -345,7 +416,6 @@ fi
 REPO_SRC_PATH=`pwd`/ndk-packages
 # These won't cause any harm on any other system, they're patched into a new branch outside of
 # the normal ndk patching mechanism (using git am).
-LINARO_GCC_WINDOWS_PATCHES_DIR=`pwd`/ndk-patches-windows
 mkdir $REPO_SRC_PATH
 PYTHONVER=/usr
 mkdir $TEMP_PATH
