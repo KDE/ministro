@@ -252,17 +252,17 @@ function makeNDK
     cp -rf $NDK/build/tools/toolchain-patches/* /tmp/ndk-tc-patches
 
     if [ "$GCC_LINARO" = "1" ] ; then
-	GCCSRCDIR="gcc"
-	rm -rf $GCCSRCDIR/gcc-4.6-2011.10
+        GCCSRCDIR="gcc"
+        rm -rf $GCCSRCDIR/gcc-4.6-2011.10
         if [ ! -d $GCCSRCDIR/gcc-4.6-2011.10 ]
-	then
-	    mkdir $GCCSRCDIR
-	    pushd $GCCSRCDIR
+        then
+            mkdir $GCCSRCDIR
+            pushd $GCCSRCDIR
             downloadIfNotExists gcc-linaro-4.6-2011.10.tar.bz2 http://launchpad.net/gcc-linaro/4.6/4.6-2011.10/+download/gcc-linaro-4.6-2011.10.tar.bz2
             tar xjvf gcc-linaro-4.6-2011.10.tar.bz2
-	    mv gcc-linaro-4.6-2011.10 gcc-4.6-2011.10
-	    popd
-	    GCC_NEEDS_PATCHING=1
+            mv gcc-linaro-4.6-2011.10 gcc-4.6-2011.10
+            popd
+            GCC_NEEDS_PATCHING=1
         fi
 #        GCCREPO=git://android.git.linaro.org/toolchain/gcc.git
         rm -rf /tmp/ndk-tc-patches/gcc/*
