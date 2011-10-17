@@ -179,10 +179,11 @@ function makeNDK
     then
 #        git clone git://android.git.kernel.org/toolchain/mpfr.git mpfr || error_msg "Can't clone mpfr"
         git clone git://git.linaro.org/people/bernhardrosenkranzer/mpfr.git mpfr || error_msg "Can't clone mpfr"
-        pushd mpfr
-        downloadIfNotExists mpfr-2.4.2.tar.bz2 http://www.mpfr.org/mpfr-2.4.2/mpfr-2.4.2.tar.bz2
-        popd
     fi
+    pushd mpfr
+    downloadIfNotExists mpfr-2.4.2.tar.bz2 http://www.mpfr.org/mpfr-2.4.2/mpfr-2.4.2.tar.bz2
+    popd
+
     if [ ! -d "binutils" ]
     then
 #        git clone git://android.git.kernel.org/toolchain/binutils.git binutils || error_msg "Can't clone binutils"
@@ -219,11 +220,12 @@ function makeNDK
     if [ ! -d "mpc" ]
     then
         mkdir mpc
-        pushd mpc
-        downloadIfNotExists mpc-0.9.tar.gz http://www.multiprecision.org/mpc/download/mpc-0.9.tar.gz
-        tar xzvf mpc-0.9.tar.gz
-        popd
     fi
+    pushd mpc
+#    downloadIfNotExists mpc-0.9.tar.gz http://www.multiprecision.org/mpc/download/mpc-0.9.tar.gz
+    downloadIfNotExists mpc-0.9.tar.gz http://pkgs.fedoraproject.org/repo/pkgs/libmpc/mpc-0.9.tar.gz/0d6acab8d214bd7d1fbbc593e83dd00d/mpc-0.9.tar.gz
+    tar xzvf mpc-0.9.tar.gz
+    popd
 
     if [ ! -d "ppl" ]
     then
@@ -237,11 +239,13 @@ function makeNDK
     if [ ! -d "cloog" ]
     then
         mkdir cloog
-        pushd cloog
-        downloadIfNotExists cloog-0.16.3.tar.gz http://www.bastoul.net/cloog/pages/download/cloog-0.16.3.tar.gz
-        tar xzvf cloog-0.16.3.tar.gz
-        popd
     fi
+
+    pushd cloog
+#    downloadIfNotExists cloog-0.16.3.tar.gz http://www.bastoul.net/cloog/pages/download/cloog-0.16.3.tar.gz
+    downloadIfNotExists cloog-0.16.3.tar.gz http://www.kotnet.org/~skimo/cloog/cloog-0.16.3.tar.gz
+    tar xzvf cloog-0.16.3.tar.gz
+    popd
 
     rm -rf /tmp/ndk-tc-patches
     mkdir /tmp/ndk-tc-patches || echo "Can't mkdir"
