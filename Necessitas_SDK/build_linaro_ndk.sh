@@ -118,14 +118,8 @@ function makeNDKForArch
     else
         ARCH_ABI=$ARCH
     fi
-#    if [ ! -f $ROOTDIR/${ARCH_ABI}-$GCC_VER-gdbserver.tar.bz2 -o ! -f $ROOTDIR/${ARCH_ABI}-${GCC_VER}-${BUILD_NDK}.tar.bz2 ]; then
-echo NDK is $NDK
-echo NDK is $NDK
-echo NDK is $NDK
-echo NDK is $NDK
-echo NDK is $NDK
-    if [ ! -f $ROOTDIR/${ARCH_ABI}-${GCC_VER}-${BUILD_NDK}.tar.bz2 ]; then
-	$NDK/build/tools/rebuild-all-prebuilt.sh --arch=$ARCH --patches-dir=/tmp/ndk-tc-patches --build-dir=/usr/ndkb --verbose --package-dir=$ROOTDIR --gcc-version=$GCC_VER --gdb-path=$GDB_ROOT_PATH --gdb-version=$GDB_VER --mpfr-version=2.4.2 --gmp-version=4.3.2 --binutils-version=2.20.1 --toolchain-src-dir=$TCSRC --gdb-with-python=$PYTHONVER
+    if [ ! -f $ROOTDIR/${ARCH_ABI}-$GCC_VER-gdbserver.tar.bz2 -o ! -f $ROOTDIR/${ARCH_ABI}-${GCC_VER}-${BUILD_NDK}.tar.bz2 ]; then
+        $NDK/build/tools/rebuild-all-prebuilt.sh --arch=$ARCH --patches-dir=/tmp/ndk-tc-patches --build-dir=/usr/ndkb --verbose --package-dir=$ROOTDIR --gcc-version=$GCC_VER --gdb-path=$GDB_ROOT_PATH --gdb-version=$GDB_VER --mpfr-version=2.4.2 --gmp-version=4.3.2 --binutils-version=2.20.1 --toolchain-src-dir=$TCSRC --gdb-with-python=$PYTHONVER
     else
         echo "Skipping NDK build, already done."
         echo $ROOTDIR/${ARCH_ABI}-${GCC_VER}-${BUILD_NDK}.tar.bz2
