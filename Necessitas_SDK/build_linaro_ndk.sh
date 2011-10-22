@@ -35,7 +35,7 @@ function downloadIfNotExists
 {
     if [ ! -f $1 ]
     then
-            if [ "$OSTYPE" = "darwin9.0" -o "$OSTYPE" = "darwin10.0" ] ; then
+            if [ "$OSTYPE_MAJOR" = "darwin" ] ; then
             curl --insecure -S -L -O $2 || removeAndExit $1
         else
             wget --no-check-certificate -c $2 || removeAndExit $1
@@ -347,11 +347,11 @@ function mixPythonWithNDK
     mkdir -p /tmp/android-ndk-${NDK_VER}-${BUILD_NDK}-repack
     rm -rf /tmp/android-ndk-${NDK_VER}-${BUILD_NDK}-repack/android-ndk-${NDK_VER}
     pushd /tmp/android-ndk-${NDK_VER}-${BUILD_NDK}-repack
-    if [ "$OSTYPE" = "msys" ] ; then
+    if [ "$OSTYPE_MAJOR" = "msys" ] ; then
         downloadIfNotExists android-ndk-${NDK_VER}-windows.zip http://dl.google.com/android/ndk/android-ndk-${NDK_VER}-windows.zip
         unzip android-ndk-${NDK_VER}-windows.zip
     else
-        if [ "$OSTYPE" = "linux-gnu" ] ; then
+        if [ "$OSTYPE_MAJOR" = "linux-gnu" ] ; then
             downloadIfNotExists android-ndk-${NDK_VER}-linux-x86.tar.bz2 http://dl.google.com/android/ndk/android-ndk-${NDK_VER}-linux-x86.tar.bz2
             tar xjvf android-ndk-${NDK_VER}-linux-x86.tar.bz2
         else
@@ -397,12 +397,12 @@ function mixPythonWithNDK
     popd
 }
 
-if [ "$OSTYPE" = "linux-gnu" ] ; then
+if [ "$OSTYPE_MAJOR" = "linux-gnu" ] ; then
     BUILD=linux
     BUILD_NDK=linux-x86
     BUILD_PYTHON=$BUILD
 else
-    if [ "$OSTYPE" = "msys" ] ; then
+    if [ "$OSTYPE_MAJOR" = "msys" ] ; then
     BUILD=windows
     BUILD_NDK=windows
     BUILD_PYTHON=mingw
@@ -413,13 +413,13 @@ else
     fi
 fi
 
-if [ "$OSTYPE" = "linux-gnu" ]; then
+if [ "$OSTYPE_MAJOR" = "linux-gnu" ]; then
     TEMP_PATH=/usr/ndk-build
     sudo mkdir -p $TEMP_PATH
     sudo chown `whoami` $TEMP_PATH
 else
     TEMP_PATH=/usr/ndk-build
-    if [ "$OSTYPE" = "darwin9.0" -o "$OSTYPE" = "darwin10.0" ] ; then
+    if [ "$OSTYPE_MAJOR" = "darwin" ] ; then
         sudo mkdir -p $TEMP_PATH
         sudo chown `whoami` $TEMP_PATH
     fi
@@ -438,11 +438,11 @@ pushd $TEMP_PATH
 #cp -rf /usr/ndk-build-old/build-windows/ndk ./build-windows
 #cp -rf /usr/ndk-build-old/build-windows/development ./build-windows
 
-if [ "$OSTYPE" = "msys" ] ; then
+if [ "$OSTYPE_MAJOR" = "msys" ] ; then
     makeInstallMinGWBits
 fi
 
-if [ "$OSTYPE" = "darwin9.0" -o "$OSTYPE" = "darwin10.0" ] ; then
+if [ "$OSTYPE_MAJOR" = "darwin" ] ; then
     if [ ! -f /usr/local/bin/7za ] ; then
         downloadIfNotExists p7zip-macosx.tar.bz2 http://mingw-and-ndk.googlecode.com/files/p7zip-macosx.tar.bz2
         tar xjvf p7zip-macosx.tar.bz2

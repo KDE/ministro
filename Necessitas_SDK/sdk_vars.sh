@@ -1,3 +1,5 @@
+OSTYPE_MAJOR=${OSTYPE//[0-9.]/}
+
 MINISTRO_VERSION="0.3" #Ministro repo version
 
 # Only for Linux, Windows and Mac use 4.8.
