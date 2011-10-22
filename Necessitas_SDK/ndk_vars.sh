@@ -11,7 +11,13 @@ GDB_VER=7.3.50.20110709
 GCC_GIT_DATE=2011-02-27
 GCC_LINARO=1
 #GCC_VER=4.4.3
+
+# This is the GCC that we actually build/built.
 GCC_VER=4.6-2011.10
+
+# This is the latest Google version, we copy new bits from GCC_VER into this (GDB only).
+GCC_VER_OTHER=4.4.3
+
 #GDB_BRANCH=master
 #GDB_ROOT_PATH=gdb
 #GDB_VER=7.3

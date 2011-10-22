@@ -146,11 +146,6 @@ function makeNDK
     pushd ndk
         git checkout -b integration origin/integration
     popd
-    echo NDK is $NDK
-    echo NDK is $NDK
-    echo NDK is $NDK
-    echo NDK is $NDK
-    echo NDK is $NDK
     export NDK=$PWD/ndk
     export ANDROID_NDK_ROOT=$NDK
     popd
@@ -331,22 +326,31 @@ function mixPythonWithNDK
 {
     if [ ! -f $REPO_SRC_PATH/python-${BUILD_PYTHON}.7z ]; then
        echo "Failed to find python, $REPO_SRC_PATH/python-${BUILD_PYTHON}.7z"
+       exit 1
     fi
     if [ ! -f $REPO_SRC_PATH/arm-linux-androideabi-${GCC_VER}-gdbserver.tar.bz2 ]; then
        echo "Failed to find arm gdbserver, $REPO_SRC_PATH/arm-linux-androideabi-${GCC_VER}-gdbserver.tar.bz2"
+       exit 1
     fi
     if [ ! -f $REPO_SRC_PATH/arm-linux-androideabi-${GCC_VER}-${BUILD_NDK}.tar.bz2 ]; then
        echo "Failed to find arm toolchain, $REPO_SRC_PATH/arm-linux-androideabi-${GCC_VER}-${BUILD_NDK}.tar.bz2"
+       exit 1
     fi
+    # x86 bits missing are not fatal (yet).
     if [ ! -f $REPO_SRC_PATH/x86-${GCC_VER}-gdbserver.tar.bz2 ]; then
        echo "Failed to find x86 gdbserver, $REPO_SRC_PATH/x86-linux-androideabi-${GCC_VER}-gdbserver.tar.bz2"
     fi
     if [ ! -f $REPO_SRC_PATH/x86-${GCC_VER}-${BUILD_NDK}.tar.bz2 ]; then
        echo "Failed to find x86 toolchain, $REPO_SRC_PATH/x86-linux-androideabi-${GCC_VER}-${BUILD_NDK}.tar.bz2"
     fi
-    mkdir -p /tmp/android-ndk-${NDK_VER}-${BUILD_NDK}-repack
-    rm -rf /tmp/android-ndk-${NDK_VER}-${BUILD_NDK}-repack/android-ndk-${NDK_VER}
-    pushd /tmp/android-ndk-${NDK_VER}-${BUILD_NDK}-repack
+    if [ "$OSTYPE_MAJOR" = "msys" ] ; then
+        mkdir -p /usr/ndki
+    else
+        sudo mkdir -p /usr/ndki
+        sudo chmod 777 /usr/ndki
+    fi
+    rm -rf /usr/ndki/android-ndk-${NDK_VER}
+    pushd /usr/ndki
     if [ "$OSTYPE_MAJOR" = "msys" ] ; then
         downloadIfNotExists android-ndk-${NDK_VER}-windows.zip http://dl.google.com/android/ndk/android-ndk-${NDK_VER}-windows.zip
         unzip android-ndk-${NDK_VER}-windows.zip
@@ -368,26 +372,47 @@ function mixPythonWithNDK
         SRCS_SUFFIX=-$GCC_VER
         cp -rf sources/cxx-stl sources/cxx-stl${SRCS_SUFFIX}
     fi
+    # Copy new libstdc++'s to sources/cxx-stl${SRCS_SUFFIX}
     [ ! -d sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi/ ] || mkdir -p sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi/
     [ ! -d sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi-v7a/ ] || mkdir -p sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi-v7a/
     [ ! -d sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/x86/ ] || mkdir -p sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/x86/
     cp toolchains/arm-linux-androideabi-${GCC_VER}/prebuilt/${BUILD_NDK}/arm-linux-androideabi/lib/thumb/libstdc++.* sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi/
     cp toolchains/arm-linux-androideabi-${GCC_VER}/prebuilt/${BUILD_NDK}/arm-linux-androideabi/lib/armv7-a/libstdc++.* sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi-v7a/
     cp toolchains/x86-${GCC_VER}/prebuilt/${BUILD_NDK}/i686-android-linux/lib/libstdc++.* sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/x86/
+    # Copy my more robust (in the face of custom ROMs) ndk-gdb.
     cp $NDK/ndk-gdb .
-    cp $NDK/ndk-build.bat .
+    # Copy my cmd.exe compatible ndk-build.bat (note, there are other bits needed for this to work, so not yet)
+    # cp $NDK/ndk-build.bat .
     tar -jxvf $REPO_SRC_PATH/arm-linux-androideabi-${GCC_VER}-gdbserver.tar.bz2
     tar -jxvf $REPO_SRC_PATH/x86-${GCC_VER}-gdbserver.tar.bz2
+    cp toolchains/arm-linux-androideabi-${GCC_VER}/prebuilt/gdbserver toolchains/arm-linux-androideabi-${GCC_VER_OTHER}/prebuilt/gdbserver
+    cp toolchains/x86-${GCC_VER}/prebuilt/gdbserver toolchains/x86-${GCC_VER_OTHER}/prebuilt/gdbserver
+
+    # Copy new gdb executables into bin of the original gcc.
+    cp toolchains/arm-linux-androideabi-${GCC_VER}/prebuilt/${BUILD_NDK}/bin/arm-linux-androideabi-gdb* toolchains/arm-linux-androideabi-${GCC_VER_OTHER}/prebuilt/${BUILD_NDK}/bin
+    cp toolchains/x86-${GCC_VER}/prebuilt/${BUILD_NDK}/bin/i686-android-linux-gdb* toolchains/x86-${GCC_VER_OTHER}/prebuilt/${BUILD_NDK}/bin
     if [ -d toolchains/arm-linux-androideabi-${GCC_VER}/prebuilt/${BUILD_NDK} ] ; then
         pushd toolchains/arm-linux-androideabi-${GCC_VER}/prebuilt/${BUILD_NDK}
             7za x $REPO_SRC_PATH/python-${BUILD_PYTHON}.7z
         popd
     fi
+    # Copy python into all 4 toolchains.
     if [ -d toolchains/x86-${GCC_VER}/prebuilt/${BUILD_NDK} ] ; then
         pushd toolchains/x86-${GCC_VER}/prebuilt/${BUILD_NDK}
             7za x $REPO_SRC_PATH/python-${BUILD_PYTHON}.7z
         popd
     fi
+    if [ -d toolchains/arm-linux-androideabi-${GCC_VER_OTHER}/prebuilt/${BUILD_NDK} ] ; then
+        pushd toolchains/arm-linux-androideabi-${GCC_VER_OTHER}/prebuilt/${BUILD_NDK}
+            7za x $REPO_SRC_PATH/python-${BUILD_PYTHON}.7z
+        popd
+    fi
+    if [ -d toolchains/x86-${GCC_VER_OTHER}/prebuilt/${BUILD_NDK} ] ; then
+        pushd toolchains/x86-${GCC_VER_OTHER}/prebuilt/${BUILD_NDK}
+            7za x $REPO_SRC_PATH/python-${BUILD_PYTHON}.7z
+        popd
+    fi
+
     # Get rid of old and unused stuff.
     rm -rf toolchains/arm-eabi-4.4.0
 #    rm -rf toolchains/x86-${GCC_VER}
@@ -433,11 +458,6 @@ PYTHONVER=/usr
 mkdir $TEMP_PATH
 pushd $TEMP_PATH
 
-#cp -rf /usr/ndk-build-old/src .
-#mkdir build-windows
-#cp -rf /usr/ndk-build-old/build-windows/ndk ./build-windows
-#cp -rf /usr/ndk-build-old/build-windows/development ./build-windows
-
 if [ "$OSTYPE_MAJOR" = "msys" ] ; then
     makeInstallMinGWBits
 fi
@@ -451,8 +471,8 @@ if [ "$OSTYPE_MAJOR" = "darwin" ] ; then
     fi
 fi
 
-#makeInstallPython
-#makeNDK
+makeInstallPython
+makeNDK
 mixPythonWithNDK
 
 popd
