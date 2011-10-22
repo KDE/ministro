@@ -1,3 +1,4 @@
+OSTYPE_MAJOR=${OSTYPE//[0-9.]/}
 NDK_VER=r6b
 
 # Refers to the gdb branches and folder structure on
