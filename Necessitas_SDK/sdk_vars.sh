@@ -1,13 +1,14 @@
 MINISTRO_VERSION="0.3" #Ministro repo version
 
+# Only for Linux, Windows and Mac use 4.8.
 HOST_QT_BRANCH="remotes/upstream/tags/v4.7.4"
 
 CHECKOUT_BRANCH="unstable"
 
 NECESSITAS_QT_CREATOR_VERSION="2.3.81"
 
-
-EXTERNAL_7Z=7z
+# archivegen gives much worse compression.
+EXTERNAL_7Z=7za
 EXTERNAL_7Z_PARAMS="a -t7z -mx=9"
 
 # Qt Framework versions
@@ -22,7 +23,15 @@ NECESSITAS_QTMOBILITY_VERSION="1.2.0" #Necessitas QtMobility Version
 BUILD_ANDROID_GIT_NDK=0 # Latest and the greatest NDK built from sources
 ANDROID_NDK_MAJOR_VERSION=r6 # NDK major version, used by package name (and ma ndk)
 ANDROID_NDK_VERSION=r6b # NDK full package version
-USE_MA_NDK=0
+USE_MA_NDK=1
+# ANDROID_GCC_VERSION_MAJOR is ??? in the folder name
+# prebuilt/linux-x86/lib/gcc/arm-linux-androideabi/???
+# ANDROID_GCC_VERSION_MAJOR=4.6.2
+# ANDROID_GCC_VERSION is ??? in the folder name
+# toolchains/arm-linux-androideabi-???/prebuilt
+# ANDROID_GCC_VERSION=4.6-2011.10
+ANDROID_GCC_VERSION_MAJOR=4.4.3
+ANDROID_GCC_VERSION=4.4.3
 
 # SDK variables
 ANDROID_SDK_VERSION=r14

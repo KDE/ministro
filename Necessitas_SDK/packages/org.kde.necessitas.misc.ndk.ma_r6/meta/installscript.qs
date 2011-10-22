@@ -22,15 +22,15 @@ function Component()
     {
         if (installer.value("os") == "x11")
         {
-            component.addDownloadableArchive( "android-ndk-@@ANDROID_NDK_MAJOR_VERSION@@-ma-linux-x86.7z" );
+            component.addDownloadableArchive( "android-ndk-@@ANDROID_NDK_VERSION@@-ma-linux-x86.7z" );
         }
         else if (installer.value("os") == "win")
         {
-            component.addDownloadableArchive( "android-ndk-@@ANDROID_NDK_MAJOR_VERSION@@-ma-windows.7z" );
+            component.addDownloadableArchive( "android-ndk-@@ANDROID_NDK_VERSION@@-ma-windows.7z" );
         }
         else if (installer.value("os") == "mac")
         {
-            component.addDownloadableArchive( "android-ndk-@@ANDROID_NDK_MAJOR_VERSION@@-ma-darwin-x86.7z" );
+            component.addDownloadableArchive( "android-ndk-@@ANDROID_NDK_VERSION@@-ma-darwin-x86.7z" );
         }
     }
 }
@@ -43,7 +43,7 @@ Component.prototype.createOperations = function()
     component.addOperation( "RegisterPersistentSettings",
                             "android.xml",
                             "NDKLocation",
-                            "@TargetDir@/android-ndk-@@ANDROID_NDK_MAJOR_VERSION@@" );
+                            "@TargetDir@/android-ndk-@@ANDROID_NDK_VERSION@@" );
     // set NDK toolchain version
     component.addOperation( "RegisterPersistentSettings",
                             "android.xml",
@@ -51,7 +51,7 @@ Component.prototype.createOperations = function()
                             "arm-linux-androideabi-4.4.3" );
 
     // set DEFAULT gdb location
-    var gdbPath = "@TargetDir@/android-ndk-@@ANDROID_NDK_MAJOR_VERSION@@/toolchains/arm-linux-androideabi-4.4.3/prebuilt/";
+    var gdbPath = "@TargetDir@/android-ndk-@@ANDROID_NDK_VERSION@@/toolchains/arm-linux-androideabi-4.4.3/prebuilt/";
     var gdbserverPath = gdbPath+"gdbserver";
     if (installer.value("os") == "x11")
     {
