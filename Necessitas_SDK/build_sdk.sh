@@ -138,7 +138,7 @@ function createArchive # params $1 folder, $2 archive name, $3 extra params
         then
             EXTRA_PARAMS="-l"
         fi
-        $EXTERNAL_7Z $EXTERNAL_7Z_PARAMS $EXTRA_PARAMS $3 $2 $1 || error_msg "Can't create archive $EXTERNAL_7Z $EXTERNAL_7Z_PARAMS -mmt=$JOBS $2 $1"
+        $EXTERNAL_7Z $EXTERNAL_7Z_PARAMS $EXTRA_PARAMS $3 $2 $1 || error_msg "Can't create archive $EXTERNAL_7Z $EXTERNAL_7Z_PARAMS $2 $1"
     else
         $SDK_TOOLS_PATH/archivegen $1 $2
     fi
