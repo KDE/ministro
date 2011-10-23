@@ -242,14 +242,14 @@ function makeNDK
 
     if [ "$GCC_LINARO" = "1" ] ; then
         GCCSRCDIR="gcc"
-        rm -rf $GCCSRCDIR/gcc-4.6-2011.10
-        if [ ! -d $GCCSRCDIR/gcc-4.6-2011.10 ]
+	rm -rf $GCCSRCDIR/gcc-4.6.2-2011.10
+	if [ ! -d $GCCSRCDIR/gcc-4.6.2-2011.10 ]
         then
             mkdir $GCCSRCDIR
             pushd $GCCSRCDIR
             downloadIfNotExists gcc-linaro-4.6-2011.10.tar.bz2 http://launchpad.net/gcc-linaro/4.6/4.6-2011.10/+download/gcc-linaro-4.6-2011.10.tar.bz2
             tar xjvf gcc-linaro-4.6-2011.10.tar.bz2
-            mv gcc-linaro-4.6-2011.10 gcc-4.6-2011.10
+	    mv gcc-linaro-4.6-2011.10 gcc-4.6.2-2011.10
             popd
             GCC_NEEDS_PATCHING=1
         fi
@@ -315,7 +315,7 @@ function makeNDK
     PYTHONHOME=""
     unset PYTHONHOME
     makeNDKForArch arm $ROOTDIR $REPO_SRC_PATH
-    makeNDKForArch x86 $ROOTDIR $REPO_SRC_PATH
+###    makeNDKForArch x86 $ROOTDIR $REPO_SRC_PATH
 
     popd
 }
@@ -337,12 +337,12 @@ function mixPythonWithNDK
        exit 1
     fi
     # x86 bits missing are not fatal (yet).
-    if [ ! -f $REPO_SRC_PATH/x86-${GCC_VER}-gdbserver.tar.bz2 ]; then
-       echo "Failed to find x86 gdbserver, $REPO_SRC_PATH/x86-linux-androideabi-${GCC_VER}-gdbserver.tar.bz2"
-    fi
-    if [ ! -f $REPO_SRC_PATH/x86-${GCC_VER}-${BUILD_NDK}.tar.bz2 ]; then
-       echo "Failed to find x86 toolchain, $REPO_SRC_PATH/x86-linux-androideabi-${GCC_VER}-${BUILD_NDK}.tar.bz2"
-    fi
+###    if [ ! -f $REPO_SRC_PATH/x86-${GCC_VER}-gdbserver.tar.bz2 ]; then
+###       echo "Failed to find x86 gdbserver, $REPO_SRC_PATH/x86-linux-androideabi-${GCC_VER}-gdbserver.tar.bz2"
+###    fi
+###    if [ ! -f $REPO_SRC_PATH/x86-${GCC_VER}-${BUILD_NDK}.tar.bz2 ]; then
+###       echo "Failed to find x86 toolchain, $REPO_SRC_PATH/x86-linux-androideabi-${GCC_VER}-${BUILD_NDK}.tar.bz2"
+###    fi
     if [ "$OSTYPE_MAJOR" = "msys" ] ; then
         mkdir -p /usr/ndki
     else
@@ -365,7 +365,7 @@ function mixPythonWithNDK
     fi
     pushd android-ndk-${NDK_VER}
     tar -jxvf $REPO_SRC_PATH/arm-linux-androideabi-${GCC_VER}-${BUILD_NDK}.tar.bz2
-    tar -jxvf $REPO_SRC_PATH/x86-${GCC_VER}-${BUILD_NDK}.tar.bz2
+###    tar -jxvf $REPO_SRC_PATH/x86-${GCC_VER}-${BUILD_NDK}.tar.bz2
     # The official NDK uses thumb version of libstdc++ for armeabi and
     # an arm version for armeabi-v7a, so copy the appropriate one over.
     if [ ! "$GCC_VER" = "4.4.3" ] ; then
@@ -375,43 +375,44 @@ function mixPythonWithNDK
     # Copy new libstdc++'s to sources/cxx-stl${SRCS_SUFFIX}
     [ ! -d sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi/ ] || mkdir -p sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi/
     [ ! -d sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi-v7a/ ] || mkdir -p sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi-v7a/
-    [ ! -d sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/x86/ ] || mkdir -p sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/x86/
+###    [ ! -d sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/x86/ ] || mkdir -p sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/x86/
     cp toolchains/arm-linux-androideabi-${GCC_VER}/prebuilt/${BUILD_NDK}/arm-linux-androideabi/lib/thumb/libstdc++.* sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi/
     cp toolchains/arm-linux-androideabi-${GCC_VER}/prebuilt/${BUILD_NDK}/arm-linux-androideabi/lib/armv7-a/libstdc++.* sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi-v7a/
-    cp toolchains/x86-${GCC_VER}/prebuilt/${BUILD_NDK}/i686-android-linux/lib/libstdc++.* sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/x86/
+###    cp toolchains/x86-${GCC_VER}/prebuilt/${BUILD_NDK}/i686-android-linux/lib/libstdc++.* sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/x86/
     # Copy my more robust (in the face of custom ROMs) ndk-gdb.
     cp $NDK/ndk-gdb .
     # Copy my cmd.exe compatible ndk-build.bat (note, there are other bits needed for this to work, so not yet)
     # cp $NDK/ndk-build.bat .
     tar -jxvf $REPO_SRC_PATH/arm-linux-androideabi-${GCC_VER}-gdbserver.tar.bz2
-    tar -jxvf $REPO_SRC_PATH/x86-${GCC_VER}-gdbserver.tar.bz2
+###    tar -jxvf $REPO_SRC_PATH/x86-${GCC_VER}-gdbserver.tar.bz2
     cp toolchains/arm-linux-androideabi-${GCC_VER}/prebuilt/gdbserver toolchains/arm-linux-androideabi-${GCC_VER_OTHER}/prebuilt/gdbserver
-    cp toolchains/x86-${GCC_VER}/prebuilt/gdbserver toolchains/x86-${GCC_VER_OTHER}/prebuilt/gdbserver
+###    cp toolchains/x86-${GCC_VER}/prebuilt/gdbserver toolchains/x86-${GCC_VER_OTHER}/prebuilt/gdbserver
 
     # Copy new gdb executables into bin of the original gcc.
     cp toolchains/arm-linux-androideabi-${GCC_VER}/prebuilt/${BUILD_NDK}/bin/arm-linux-androideabi-gdb* toolchains/arm-linux-androideabi-${GCC_VER_OTHER}/prebuilt/${BUILD_NDK}/bin
-    cp toolchains/x86-${GCC_VER}/prebuilt/${BUILD_NDK}/bin/i686-android-linux-gdb* toolchains/x86-${GCC_VER_OTHER}/prebuilt/${BUILD_NDK}/bin
+###    cp toolchains/x86-${GCC_VER}/prebuilt/${BUILD_NDK}/bin/i686-android-linux-gdb* toolchains/x86-${GCC_VER_OTHER}/prebuilt/${BUILD_NDK}/bin
+
+    # Copy python into all 4 toolchains.
     if [ -d toolchains/arm-linux-androideabi-${GCC_VER}/prebuilt/${BUILD_NDK} ] ; then
         pushd toolchains/arm-linux-androideabi-${GCC_VER}/prebuilt/${BUILD_NDK}
             7za x $REPO_SRC_PATH/python-${BUILD_PYTHON}.7z
         popd
     fi
-    # Copy python into all 4 toolchains.
-    if [ -d toolchains/x86-${GCC_VER}/prebuilt/${BUILD_NDK} ] ; then
-        pushd toolchains/x86-${GCC_VER}/prebuilt/${BUILD_NDK}
-            7za x $REPO_SRC_PATH/python-${BUILD_PYTHON}.7z
-        popd
-    fi
+###    if [ -d toolchains/x86-${GCC_VER}/prebuilt/${BUILD_NDK} ] ; then
+###        pushd toolchains/x86-${GCC_VER}/prebuilt/${BUILD_NDK}
+###            7za x $REPO_SRC_PATH/python-${BUILD_PYTHON}.7z
+###        popd
+###    fi
     if [ -d toolchains/arm-linux-androideabi-${GCC_VER_OTHER}/prebuilt/${BUILD_NDK} ] ; then
         pushd toolchains/arm-linux-androideabi-${GCC_VER_OTHER}/prebuilt/${BUILD_NDK}
             7za x $REPO_SRC_PATH/python-${BUILD_PYTHON}.7z
         popd
     fi
-    if [ -d toolchains/x86-${GCC_VER_OTHER}/prebuilt/${BUILD_NDK} ] ; then
-        pushd toolchains/x86-${GCC_VER_OTHER}/prebuilt/${BUILD_NDK}
-            7za x $REPO_SRC_PATH/python-${BUILD_PYTHON}.7z
-        popd
-    fi
+###    if [ -d toolchains/x86-${GCC_VER_OTHER}/prebuilt/${BUILD_NDK} ] ; then
+###        pushd toolchains/x86-${GCC_VER_OTHER}/prebuilt/${BUILD_NDK}
+###            7za x $REPO_SRC_PATH/python-${BUILD_PYTHON}.7z
+###        popd
+###    fi
 
     # Get rid of old and unused stuff.
     rm -rf toolchains/arm-eabi-4.4.0
