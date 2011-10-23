@@ -18,6 +18,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+# TODO :: the stdc++ lib archives overwrite each other (arm vs x86)
+# TODO :: re-enable x86
+# TODO :: tidy up toolchain extraction & patching (happens always even if already done)
+
 . ndk_vars.sh
 
 function error_msg
@@ -118,7 +122,7 @@ function makeNDKForArch
     else
         ARCH_ABI=$ARCH
     fi
-    if [ ! -f /usr/ndkb/${ARCH_ABI}-$GCC_VER-gdbserver.tar.bz2 -o ! -f /usr/ndkb/${ARCH_ABI}-${GCC_VER}-${BUILD_NDK}.tar.bz2 ]; then
+    if [ ! -f /usr/ndkb/${ARCH_ABI}-${GCC_VER}-gdbserver.tar.bz2 -o ! -f /usr/ndkb/${ARCH_ABI}-${GCC_VER}-${BUILD_NDK}.tar.bz2 ]; then
 	$NDK/build/tools/rebuild-all-prebuilt.sh --arch=$ARCH --patches-dir=/tmp/ndk-tc-patches --build-dir=/usr/ndkb --verbose --package-dir=/usr/ndkb --gcc-version=$GCC_VER --gdb-path=$GDB_ROOT_PATH --gdb-version=$GDB_VER --mpfr-version=2.4.2 --gmp-version=4.3.2 --binutils-version=2.20.1 --toolchain-src-dir=$TCSRC --gdb-with-python=$PYTHONVER
     else
         echo "Skipping NDK build, already done."
@@ -126,6 +130,7 @@ function makeNDKForArch
     fi
     cp /usr/ndkb/${ARCH_ABI}-${GCC_VER}-${BUILD_NDK}.tar.bz2 $REPO_SRC_PATH/${ARCH_ABI}-${GCC_VER}-${BUILD_NDK}.tar.bz2
     cp /usr/ndkb/${ARCH_ABI}-${GCC_VER}-gdbserver.tar.bz2 $REPO_SRC_PATH/${ARCH_ABI}-${GCC_VER}-gdbserver.tar.bz2
+    cp /usr/ndkb/gnu-lib*.bz2 $REPO_SRC_PATH/
 }
 
 function makeNDK
@@ -228,13 +233,12 @@ function makeNDK
     if [ ! -d "cloog" ]
     then
         mkdir cloog
+	pushd cloog
+#        downloadIfNotExists cloog-0.16.3.tar.gz http://www.bastoul.net/cloog/pages/download/cloog-0.16.3.tar.gz
+	downloadIfNotExists cloog-0.16.3.tar.gz http://www.kotnet.org/~skimo/cloog/cloog-0.16.3.tar.gz
+	tar xzvf cloog-0.16.3.tar.gz
+	popd
     fi
-
-    pushd cloog
-#    downloadIfNotExists cloog-0.16.3.tar.gz http://www.bastoul.net/cloog/pages/download/cloog-0.16.3.tar.gz
-    downloadIfNotExists cloog-0.16.3.tar.gz http://www.kotnet.org/~skimo/cloog/cloog-0.16.3.tar.gz
-    tar xzvf cloog-0.16.3.tar.gz
-    popd
 
     rm -rf /tmp/ndk-tc-patches
     mkdir /tmp/ndk-tc-patches || echo "Can't mkdir"
@@ -242,14 +246,14 @@ function makeNDK
 
     if [ "$GCC_LINARO" = "1" ] ; then
         GCCSRCDIR="gcc"
-	rm -rf $GCCSRCDIR/gcc-4.6.2-2011.10
-	if [ ! -d $GCCSRCDIR/gcc-4.6.2-2011.10 ]
+	rm -rf $GCCSRCDIR/gcc-4.6.2
+	if [ ! -d $GCCSRCDIR/gcc-4.6.2 ]
         then
             mkdir $GCCSRCDIR
             pushd $GCCSRCDIR
             downloadIfNotExists gcc-linaro-4.6-2011.10.tar.bz2 http://launchpad.net/gcc-linaro/4.6/4.6-2011.10/+download/gcc-linaro-4.6-2011.10.tar.bz2
             tar xjvf gcc-linaro-4.6-2011.10.tar.bz2
-	    mv gcc-linaro-4.6-2011.10 gcc-4.6.2-2011.10
+	    mv gcc-linaro-4.6-2011.10 gcc-4.6.2
             popd
             GCC_NEEDS_PATCHING=1
         fi
@@ -349,13 +353,23 @@ function mixPythonWithNDK
         sudo mkdir -p /usr/ndki
         sudo chmod 777 /usr/ndki
     fi
+    if [ ! "$GCC_VER" = "4.4.3" ] ; then
+	SRCS_SUFFIX=-$GCC_VER
+    fi
     rm -rf /usr/ndki/android-ndk-${NDK_VER}
     pushd /usr/ndki
+    mkdir android-ndk-${NDK_VER}
+    pushd android-ndk-${NDK_VER}
+    find $REPO_SRC_PATH -name "gnu-lib*.tar.bz2" | xargs -I @ tar -xjvf $1 @
+    if [ ! "$SRCS_SUFFIX" = "" ] ; then
+	mv sources/cxx-stl sources/cxx-stl$SRCS_SUFFIX
+    fi
+    popd
     if [ "$OSTYPE_MAJOR" = "msys" ] ; then
-        downloadIfNotExists android-ndk-${NDK_VER}-windows.zip http://dl.google.com/android/ndk/android-ndk-${NDK_VER}-windows.zip
-        unzip android-ndk-${NDK_VER}-windows.zip
+	downloadIfNotExists android-ndk-${NDK_VER}-windows.zip http://dl.google.com/android/ndk/android-ndk-${NDK_VER}-windows.zip
+	unzip android-ndk-${NDK_VER}-windows.zip
     else
-        if [ "$OSTYPE_MAJOR" = "linux-gnu" ] ; then
+	if [ "$OSTYPE_MAJOR" = "linux-gnu" ] ; then
             downloadIfNotExists android-ndk-${NDK_VER}-linux-x86.tar.bz2 http://dl.google.com/android/ndk/android-ndk-${NDK_VER}-linux-x86.tar.bz2
             tar xjvf android-ndk-${NDK_VER}-linux-x86.tar.bz2
         else
@@ -368,22 +382,19 @@ function mixPythonWithNDK
 ###    tar -jxvf $REPO_SRC_PATH/x86-${GCC_VER}-${BUILD_NDK}.tar.bz2
     # The official NDK uses thumb version of libstdc++ for armeabi and
     # an arm version for armeabi-v7a, so copy the appropriate one over.
-    if [ ! "$GCC_VER" = "4.4.3" ] ; then
-        SRCS_SUFFIX=-$GCC_VER
-        cp -rf sources/cxx-stl sources/cxx-stl${SRCS_SUFFIX}
-    fi
     # Copy new libstdc++'s to sources/cxx-stl${SRCS_SUFFIX}
-    [ ! -d sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi/ ] || mkdir -p sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi/
-    [ ! -d sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi-v7a/ ] || mkdir -p sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi-v7a/
+#    [ ! -d sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi/ ] || mkdir -p sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi/
+#    [ ! -d sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi-v7a/ ] || mkdir -p sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi-v7a/
 ###    [ ! -d sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/x86/ ] || mkdir -p sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/x86/
-    cp toolchains/arm-linux-androideabi-${GCC_VER}/prebuilt/${BUILD_NDK}/arm-linux-androideabi/lib/thumb/libstdc++.* sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi/
-    cp toolchains/arm-linux-androideabi-${GCC_VER}/prebuilt/${BUILD_NDK}/arm-linux-androideabi/lib/armv7-a/libstdc++.* sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi-v7a/
+#    cp toolchains/arm-linux-androideabi-${GCC_VER}/prebuilt/${BUILD_NDK}/arm-linux-androideabi/lib/thumb/libstdc++.* sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi/
+#    cp toolchains/arm-linux-androideabi-${GCC_VER}/prebuilt/${BUILD_NDK}/arm-linux-androideabi/lib/armv7-a/libstdc++.* sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi-v7a/
 ###    cp toolchains/x86-${GCC_VER}/prebuilt/${BUILD_NDK}/i686-android-linux/lib/libstdc++.* sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/x86/
     # Copy my more robust (in the face of custom ROMs) ndk-gdb.
     cp $NDK/ndk-gdb .
     # Copy my cmd.exe compatible ndk-build.bat (note, there are other bits needed for this to work, so not yet)
     # cp $NDK/ndk-build.bat .
     tar -jxvf $REPO_SRC_PATH/arm-linux-androideabi-${GCC_VER}-gdbserver.tar.bz2
+
 ###    tar -jxvf $REPO_SRC_PATH/x86-${GCC_VER}-gdbserver.tar.bz2
     cp toolchains/arm-linux-androideabi-${GCC_VER}/prebuilt/gdbserver toolchains/arm-linux-androideabi-${GCC_VER_OTHER}/prebuilt/gdbserver
 ###    cp toolchains/x86-${GCC_VER}/prebuilt/gdbserver toolchains/x86-${GCC_VER_OTHER}/prebuilt/gdbserver
