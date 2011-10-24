@@ -261,7 +261,6 @@ public class MinistroActivity extends Activity
             if (root.hasAttribute("features"))
                 supportedFeatures=root.getAttribute("features");
             connection = getLibsXmlUrl(c, version+deviceSupportedFeatures(supportedFeatures)).openConnection();
-            connection.setRequestProperty("Accept-Encoding", "gzip,deflate");
             File file= new File(MinistroService.instance().getVersionXmlFile());
             file.delete();
             FileOutputStream outstream = new FileOutputStream(MinistroService.instance().getVersionXmlFile());
@@ -318,7 +317,6 @@ public class MinistroActivity extends Activity
         {
             MessageDigest digester = MessageDigest.getInstance("SHA-1");
             URLConnection connection = new URL(url).openConnection();
-            connection.setRequestProperty("Accept-Encoding", "gzip,deflate");
             Library.mkdirParents(m_qtLibsRootPath, file, 1);
             String filePath=m_qtLibsRootPath+file;
             int progressSize=0;
@@ -350,7 +348,6 @@ public class MinistroActivity extends Activity
                 {
                     outstream.close();
                     nativeChmode(filePath, 0644);
-                    MinistroService.instance().refreshLibraries(false);
                     return true;
                 }
                 outstream.close();
@@ -452,6 +449,7 @@ public class MinistroActivity extends Activity
                 m_dialog.dismiss();
                 m_dialog = null;
             }
+            MinistroService.instance().refreshLibraries(false);
             finishMe();
         }
     }
