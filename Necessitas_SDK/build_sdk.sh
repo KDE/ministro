@@ -260,7 +260,9 @@ function prepareHostQt
         if [ "$OSTYPE_MAJOR" = "msys" -o "$OSTYPE_MAJOR" = "darwin" ]
 	then
             git clone git://gitorious.org/~mingwandroid/qt/mingw-android-official-qt.git qt-src || error_msg "Can't clone mingw qt"
+            pushd qt-src
             git checkout -b 4.8 refs/remotes/origin/4.8
+            popd
         else
             git clone git://anongit.kde.org/android-qt.git qt-src || error_msg "Can't clone ${1}"
             pushd qt-src
