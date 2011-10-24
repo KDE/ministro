@@ -1651,6 +1651,11 @@ function setPackagesVariables
 function prepareSDKBinary
 {
     $SDK_TOOLS_PATH/binarycreator -v -t $SDK_TOOLS_PATH/installerbase$EXE_EXT -c $REPO_SRC_PATH/config -p $REPO_PATH_PACKAGES -n $REPO_SRC_PATH/necessitas-sdk-installer$HOST_QT_CONFIG$EXE_EXT org.kde.necessitas
+    # Work around mac bug. qt_menu.nib doesn't get copied to the build, nor to the app.
+    # https://bugreports.qt.nokia.com//browse/QTBUG-5952
+    if [ "$OSTYPE_MAJOR" = "darwin" ] ; then
+        cp -rf $QT_SRCDIR/src/gui/mac/qt_menu.nib $REPO_SRC_PATH/necessitas-sdk-installer$HOST_QT_CONFIG$EXE_EXT.app/Contents/Resources/
+    fi
     mkdir sdkmaintenance
     pushd sdkmaintenance
     rm -fr *.7z
