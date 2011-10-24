@@ -290,8 +290,13 @@ function prepareHostQt
     fi
 
 
-    mkdir static-build$HOST_QT_CONFIG
-    pushd static-build$HOST_QT_CONFIG
+    if [ "$OSTYPE_MAJOR" = "msys" ] ; then
+        mkdir st-b$HOST_QT_CONFIG
+        pushd st-b$HOST_QT_CONFIG
+    else
+        mkdir static-build$HOST_QT_CONFIG
+        pushd static-build$HOST_QT_CONFIG
+    fi
     STATIC_QT_PATH=$PWD
     if [ ! -f all_done ]
     then
@@ -312,8 +317,13 @@ function prepareHostQt
     popd
 
     #build qt shared, needed by QtCreator
-    mkdir shared-build$HOST_QT_CONFIG
-    pushd shared-build$HOST_QT_CONFIG
+    if [ "$OSTYPE_MAJOR" = "msys" ] ; then
+        mkdir sh-b$HOST_QT_CONFIG
+        pushd sh-b$HOST_QT_CONFIG
+    else
+        mkdir shared-build$HOST_QT_CONFIG
+        pushd shared-build$HOST_QT_CONFIG
+    fi
     SHARED_QT_PATH=$PWD
     if [ ! -f all_done ]
     then
