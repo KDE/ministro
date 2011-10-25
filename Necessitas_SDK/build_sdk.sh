@@ -136,12 +136,7 @@ function createArchive # params $1 folder, $2 archive name, $3 extra params
 {
     if [ "$EXTERNAL_7Z" != "" ]
     then
-        EXTRA_PARAMS=""
-        if [ $HOST_TAG = "windows" ]
-        then
-            EXTRA_PARAMS="-l"
-        fi
-        $EXTERNAL_7Z $EXTERNAL_7Z_PARAMS -mmt=$JOBS $EXTRA_PARAMS $3 $2 $1 || error_msg "Can't create archive $EXTERNAL_7Z $EXTERNAL_7Z_PARAMS -mmt=$JOBS $2 $1"
+        $EXTERNAL_7Z $EXTERNAL_7Z_PARAMS $3 $2 $1 || error_msg "Can't create archive $EXTERNAL_7Z $EXTERNAL_7Z_PARAMS $2 $1"
     else
         $SDK_TOOLS_PATH/archivegen $2 $1
     fi
@@ -165,13 +160,16 @@ function downloadIfNotExists
     fi
 }
 
+# Horrible. On OSX, building Qt Creator randomly fails building the plugins with -jN
+# e.g. "ld: library not found for -lProjectExplorer" when building libUpdateInfo.dylib.
+# Probably dependencies between plugins not being handled correctly. For this reason,
+# I employ the conservative approach if using make without -j if it fails with -j$JOBS
 function doMake
 {
     MAKEPROG=make
     if [ "$OSTYPE_MAJOR" = "msys" -o  "$OSTYPE_MAJOR" = "darwin" ] ; then
         if [ "$OSTYPE_MAJOR" = "msys" ] ; then
             MAKEDIR=`pwd -W`
-            MAKEFOREVER=1
             if [ ! -z $3 ] ; then
                 MAKEPROG=$3
             fi
@@ -179,6 +177,7 @@ function doMake
             MAKEDIR=`pwd`
             MAKEFOREVER=0
         fi
+        MAKEFOREVER=1
         MAKEFILE=$MAKEDIR/Makefile
         $MAKEPROG -f $MAKEFILE -j$JOBS
         while [ "$?" != "0" -a "$MAKEFOREVER" = "1" ]
@@ -188,7 +187,7 @@ function doMake
                 rm -f /usr/break-make
                 error_msg $1
             fi
-            $MAKEPROG -f $MAKEFILE -j$JOBS
+            $MAKEPROG -f $MAKEFILE
         done
         echo $2>all_done
     else
@@ -261,7 +260,7 @@ function prepareHostQt
 	then
             git clone git://gitorious.org/~mingwandroid/qt/mingw-android-official-qt.git qt-src || error_msg "Can't clone mingw qt"
             pushd qt-src
-            git checkout -b 4.8 refs/remotes/origin/4.8
+            git checkout -b 4.8 $HOST_QT_BRANCH
             popd
         else
             git clone git://anongit.kde.org/android-qt.git qt-src || error_msg "Can't clone ${1}"
@@ -306,7 +305,7 @@ function prepareHostQt
         popd
         rm -fr *
         $QT_SRCDIR/configure -fast -nomake examples -nomake demos -nomake tests -qt-zlib -no-gif -qt-libtiff -qt-libpng -qt-libmng -qt-libjpeg -opensource -static -no-webkit -no-phonon -no-dbus -no-opengl -no-qt3support -no-xmlpatterns -no-svg -confirm-license $HOST_CFG_OPTIONS $HOST_CFG_OPTIONS_STATIC $OPTS_CFG -host-little-endian --prefix=$PWD || error_msg "Can't configure $HOST_QT_VERSION"
-        doMake "Can't compile static $HOST_QT_VERSION" "all done" ma-make
+        doMake "Can't compile static $HOST_QT_VERSION" "all done"
         if [ "$OSTYPE_MAJOR" = "msys" ]; then
             # Horrible; need to fix this properly.
             doSed $"s/qt warn_on /qt static ms_bitfields static_gcclibs warn_on /" mkspecs/win32-g++/qmake.conf
@@ -333,7 +332,7 @@ function prepareHostQt
         popd
         rm -fr *
         $QT_SRCDIR/configure $HOST_CFG_OPTIONS -fast -nomake examples -nomake demos -nomake tests -system-zlib -qt-libtiff -qt-libpng -qt-libmng -qt-libjpeg -opensource -shared -webkit -no-phonon -qt-sql-sqlite -plugin-sql-sqlite -no-qt3support -confirm-license $HOST_CFG_OPTIONS $OPTS_CFG -host-little-endian --prefix=$PWD || error_msg "Can't configure $HOST_QT_VERSION"
-        doMake "Can't compile shared $HOST_QT_VERSION" "all done" ma-make
+        doMake "Can't compile shared $HOST_QT_VERSION" "all done"
         if [ "$OSTYPE_MAJOR" = "msys" ]; then
             # Horrible; need to fix this properly.
             doSed $"s/qt warn_on /qt shared ms_bitfields static_gcclibs warn_on /" mkspecs/win32-g++/qmake.conf

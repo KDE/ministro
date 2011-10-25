@@ -3,15 +3,36 @@ OSTYPE_MAJOR=${OSTYPE//[0-9.]/}
 MINISTRO_VERSION="0.3" #Ministro repo version
 
 # Only for Linux, Windows and Mac use 4.8.
-HOST_QT_BRANCH="remotes/upstream/tags/v4.7.4"
+if [ "$OSTYPE_MAJOR" = "linux-gnu" ] ; then
+    HOST_QT_BRANCH="remotes/upstream/tags/v4.7.4"
+else
+    HOST_QT_BRANCH="refs/remotes/origin/4.8"
+fi
 
 CHECKOUT_BRANCH="unstable"
 
 NECESSITAS_QT_CREATOR_VERSION="2.3.81"
 
 # archivegen gives much worse compression.
-EXTERNAL_7Z=7za
-EXTERNAL_7Z_PARAMS="a -t7z -mx=9"
+if [ "$OSTYPE_MAJOR" = "msys" ] ; then
+    JOBS=`expr $NUMBER_OF_PROCESSORS + 2`
+else
+    if [ "$OSTYPE_MAJOR" = "darwin" ] ; then
+        JOBS=`sysctl -n hw.ncpu`
+        JOBS=`expr $JOBS + $JOBS + 2`
+    else
+        JOBS=`cat /proc/cpuinfo | grep processor | wc -l`
+        JOBS=`expr $JOBS + 2`
+    fi
+fi
+
+if [ "$OSTYPE_MAJOR" = "linux-gnu" ] ; then
+    EXTERNAL_7Z=7z
+    EXTERNAL_7Z_PARAMS="a -t7z -mx=9 -mmt=$JOBS"
+else
+    EXTERNAL_7Z=7za
+    EXTERNAL_7Z_PARAMS="a -t7z -mx=9"
+fi
 
 # Qt Framework versions
 NECESSITAS_QT_VERSION_SHORT=4763 #Necessitas Qt Framework Version
