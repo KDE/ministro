@@ -1,13 +1,13 @@
 <?xml version="1.0"?>
 <Package>
     <DisplayName>Android NDK-@@ANDROID_NDK_VERSION@@</DisplayName>
-    <Description>Android NDK-@@ANDROID_NDK_VERSION@@, if you use this then you also need to use the gdb package</Description>
-    <Version>6.1.0-@@ANDROID_NDK_VERSION@@</Version>
+    <Description>Android NDK-@@ANDROID_NDK_VERSION@@</Description>
+    <Version>6.1.2011.10</Version>
     <ReleaseDate>@@TODAY@@</ReleaseDate>
     <Name>org.kde.necessitas.misc.ndk.@@ANDROID_NDK_MAJOR_VERSION@@</Name>
     <Script>installscript.qs</Script>
     <Dependencies>org.kde.necessitas.tools.qtcreator</Dependencies>
     <Default>true</Default>
-    <InstallPriority>90</InstallPriority>
-    <SortingPriority>90</SortingPriority>
+    <InstallPriority>0</InstallPriority>
+    <SortingPriority>0</SortingPriority>
 </Package>

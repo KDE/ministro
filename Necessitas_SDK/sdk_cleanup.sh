@@ -7,6 +7,7 @@ function removeUnusedPackages
     # Do we really need this packages? No, but they're quite handy!
     rm -fr $TEMP_PATH/out/necessitas/sdk_src/org.kde.necessitas.misc.ndk.gdb_head
     rm -fr $TEMP_PATH/out/necessitas/sdk_src/org.kde.necessitas.misc.host_gdb_head
+    rm -fr $TEMP_PATH/out/necessitas/sdk_src/org.kde.necessitas.misc.ndk.gdb_7_3
 
     # OpenJDK needs to be handled into QtCeator
     rm -fr $TEMP_PATH/out/necessitas/sdk_src/org.kde.necessitas.misc.openjdk

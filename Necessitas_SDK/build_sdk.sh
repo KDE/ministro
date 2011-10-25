@@ -1115,7 +1115,7 @@ function prepareSDKs
         fi
     fi
 
-    # repack platform-tools 
+    # repack platform-tools
     repackSDKPlatform-tools platform-tools_${ANDROID_PLATFORM_TOOLS_VERSION}-linux platform-tools_${ANDROID_PLATFORM_TOOLS_VERSION}-linux android-sdk platform-tools
     repackSDKPlatform-tools platform-tools_${ANDROID_PLATFORM_TOOLS_VERSION}-macosx platform-tools_${ANDROID_PLATFORM_TOOLS_VERSION}-macosx android-sdk platform-tools
     repackSDKPlatform-tools platform-tools_${ANDROID_PLATFORM_TOOLS_VERSION}-windows platform-tools_${ANDROID_PLATFORM_TOOLS_VERSION}-windows android-sdk platform-tools
@@ -1228,13 +1228,19 @@ function compileNecessitasQt #params $1 architecture, $2 package path, $3 NDK_TA
     # NQT_INSTALL_DIR=/data/data/org.kde.necessitas.ministro/files/qt
     NQT_INSTALL_DIR=$PWD/install
 
-    if [ ! -d android-sdk-${HOST_TAG_NEC}/platform-tools ]
-    then
-        rm -fr android-sdk-${HOST_TAG_NEC}
-        7z -y x $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.base/data/android-sdk-${HOST_TAG_NEC}.7z
-        7z -y x $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.platform_tools/data/platform-tools_${ANDROID_PLATFORM_TOOLS_VERSION}-${HOST_TAG_NEC}.7z
-        7z -y x $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.android_14/data/android-${ANDROID_API_14_VERSION}.7z
-        7z -y x $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.android_8/data/android-${ANDROID_API_8_VERSION}.7z
+    if [ "$OSTYPE" = "linux-gnu" ] ; then
+        if [ ! -d android-sdk-linux/platform-tools ]
+        then
+            rm -fr android-sdk-linux
+            7z -y x $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.base/data/android-sdk-linux.7z
+            7z -y x $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.platform_tools/data/platform-tools_${ANDROID_PLATFORM_TOOLS_VERSION}-linux.7z
+            7z -y x $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.android_14/data/android-${ANDROID_API_14_VERSION}.7z
+            7z -y x $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.android_8/data/android-${ANDROID_API_8_VERSION}.7z
+            7z -y x $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.android_7/data/android-${ANDROID_API_7_VERSION}.7z
+            7z -y x $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.android_4/data/android-${ANDROID_API_4_VERSION}-linux.7z
+        fi
+        export ANDROID_SDK_TOOLS_PATH=$PWD/android-sdk/tools/
+        export ANDROID_SDK_PLATFORM_TOOLS_PATH=$PWD/android-sdk/platform-tools/
     fi
     export ANDROID_SDK_TOOLS_PATH=$PWD/android-sdk/tools/
     export ANDROID_SDK_PLATFORM_TOOLS_PATH=$PWD/android-sdk/platform-tools/
@@ -1528,7 +1534,7 @@ function prepareNecessitasQtWebkit
 #         compileNecessitasQtWebkit x86 Android/Qt/$NECESSITAS_QT_VERSION_SHORT
 #         popd #build-webkit-x86
 #     fi
-# 
+#
     if [ ! -f $REPO_PATH_PACKAGES/org.kde.necessitas.android.qtwebkit.src/data/qtwebkit-src.7z ]
     then
         packSource qtwebkit-src
@@ -1627,6 +1633,8 @@ function setPackagesVariables
 
     patchPackages "@@NECESSITAS_QT_VERSION@@" $NECESSITAS_QT_VERSION
     patchPackages "@@NECESSITAS_QT_VERSION_SHORT@@" $NECESSITAS_QT_VERSION_SHORT
+    patchPackages "@@NECESSITAS_QT_PACKAGE_VERSION@@" $NECESSITAS_QT_PACKAGE_VERSION
+
     patchPackages "@@NECESSITAS_QTWEBKIT_VERSION@@" $NECESSITAS_QTWEBKIT_VERSION
     patchPackages "@@NECESSITAS_QTMOBILITY_VERSION@@" $NECESSITAS_QTMOBILITY_VERSION
     patchPackages "@@REPOSITORY@@" $CHECKOUT_BRANCH
@@ -1713,7 +1721,7 @@ function prepareMinistroRepository
         fi
     fi
     popd
-    for platfromArchitecture in armeabi armeabi-v7a armeabi-android-4 
+    for platfromArchitecture in armeabi armeabi-v7a armeabi-android-4
     do
         pushd $TEMP_PATH/$CHECKOUT_BRANCH/Android/Qt/$NECESSITAS_QT_VERSION_SHORT/install-$platfromArchitecture || error_msg "Can't prepare ministro repo, Android Qt not built?"
         architecture=$platfromArchitecture;
@@ -1836,7 +1844,7 @@ prepareSDKs
 prepareAnt
 prepareNecessitasQtCreator
 # prepareGDBVersion head $HOST_TAG
-prepareGDBVersion 7.3
+# prepareGDBVersion 7.3
 # prepareGDBVersion head
 mkdir $CHECKOUT_BRANCH
 pushd $CHECKOUT_BRANCH
