@@ -437,17 +437,21 @@ function prepareNecessitasQtCreator
                 cp -a $SHARED_QT_PATH/plugins/* ${QT_LIB_DEST}../plugins
                 cp -a bin/necessitas $QTC_INST_PATH/bin/
             else
-                pushd macdeployqt
-                $SHARED_QT_PATH/bin/qmake $HOST_QT_CFG $HOST_QM_CFG_OPTIONS -r || error_msg "Can't configure macdeployqt"
-                doMake "Can't compile macdeployqt" "all done" ma-make
-                popd
+ #               pushd macdeployqt
+ #               $SHARED_QT_PATH/bin/qmake $HOST_QT_CFG $HOST_QM_CFG_OPTIONS -r || error_msg "Can't configure macdeployqt"
+ #               doMake "Can't compile macdeployqt" "all done" ma-make
+ #               popd
+ #               pushd bin
+ #               rm -rf NecessitasQtCreatorBackup.app
+ #               cp -rf NecessitasQtCreator.app NecessitasQtCreatorBackup.app
+ #               ../macdeployqt/macdeployqt/macdeployqt NecessitasQtCreator.app
+ #               popd
+ #               mv bin/NecessitasQtCreator.app $QTC_INST_PATH/bin/NecessitasQtCreator.app
+ #               mv bin/NecessitasQtCreatorBackup.app bin/NecessitasQtCreator.app
                 pushd bin
-                rm -rf NecessitasQtCreatorBackup.app
-                cp -rf NecessitasQtCreator.app NecessitasQtCreatorBackup.app
-                ../macdeployqt/macdeployqt/macdeployqt NecessitasQtCreator.app
+                    $SHARED_QT_PATH/bin/macdeployqt NecessitasQtCreator.app
+                    cp -rf NecessitasQtCreator.app $QTC_INST_PATH/bin/NecessitasQtCreator.app
                 popd
-                mv bin/NecessitasQtCreator.app $QTC_INST_PATH/bin/NecessitasQtCreator.app
-                mv bin/NecessitasQtCreatorBackup.app bin/NecessitasQtCreator.app
             fi
         fi
         mkdir $QTC_INST_PATH/images
@@ -457,6 +461,7 @@ function prepareNecessitasQtCreator
             find . -name "*$SHLIB_EXT" | xargs $STRIP
         fi
         popd
+        [ -f qtcreator-${HOST_TAG}${HOST_QT_CONFIG}.7z ] && rm qtcreator-${HOST_TAG}${HOST_QT_CONFIG}.7z
         createArchive QtCreator$HOST_QT_CONFIG qtcreator-${HOST_TAG}${HOST_QT_CONFIG}.7z
         mkdir -p $REPO_PATH_PACKAGES/org.kde.necessitas.tools.qtcreator/data
         mv qtcreator-${HOST_TAG}${HOST_QT_CONFIG}.7z $REPO_PATH_PACKAGES/org.kde.necessitas.tools.qtcreator/data/qtcreator-${HOST_TAG}${HOST_QT_CONFIG}.7z
@@ -1673,7 +1678,11 @@ function prepareSDKBinary
         cp -a $REPO_SRC_PATH/necessitas-sdk-installer$HOST_QT_CONFIG$EXE_EXT temp/SDKMaintenanceToolBase.exe
         createArchive temp sdkmaintenance-windows.7z
     else
-        cp -a $REPO_SRC_PATH/necessitas-sdk-installer$HOST_QT_CONFIG$EXE_EXT .tempSDKMaintenanceTool
+        if [ "$OSTYPE_MAJOR" = "darwin" ] ; then
+            cp -a $REPO_SRC_PATH/necessitas-sdk-installer$HOST_QT_CONFIG$EXE_EXT.app .tempSDKMaintenanceTool
+        else
+            cp -a $REPO_SRC_PATH/necessitas-sdk-installer$HOST_QT_CONFIG$EXE_EXT .tempSDKMaintenanceTool
+        fi
         if [ "$OSTYPE_MAJOR" = "linux-gnu" ] ; then
                 createArchive . sdkmaintenance-linux-x86.7z
         else
