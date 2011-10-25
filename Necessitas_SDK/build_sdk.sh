@@ -1232,12 +1232,12 @@ function compileNecessitasQt #params $1 architecture, $2 package path, $3 NDK_TA
         if [ ! -d android-sdk-linux/platform-tools ]
         then
             rm -fr android-sdk-linux
-            7z -y x $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.base/data/android-sdk-linux.7z
-            7z -y x $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.platform_tools/data/platform-tools_${ANDROID_PLATFORM_TOOLS_VERSION}-linux.7z
-            7z -y x $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.android_14/data/android-${ANDROID_API_14_VERSION}.7z
-            7z -y x $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.android_8/data/android-${ANDROID_API_8_VERSION}.7z
-            7z -y x $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.android_7/data/android-${ANDROID_API_7_VERSION}.7z
-            7z -y x $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.android_4/data/android-${ANDROID_API_4_VERSION}-linux.7z
+            $EXTERNAL_7Z -y x $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.base/data/android-sdk-linux.7z
+            $EXTERNAL_7Z -y x $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.platform_tools/data/platform-tools_${ANDROID_PLATFORM_TOOLS_VERSION}-linux.7z
+            $EXTERNAL_7Z -y x $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.android_14/data/android-${ANDROID_API_14_VERSION}.7z
+            $EXTERNAL_7Z -y x $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.android_8/data/android-${ANDROID_API_8_VERSION}.7z
+            $EXTERNAL_7Z -y x $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.android_7/data/android-${ANDROID_API_7_VERSION}.7z
+            $EXTERNAL_7Z -y x $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.android_4/data/android-${ANDROID_API_4_VERSION}-linux.7z
         fi
         export ANDROID_SDK_TOOLS_PATH=$PWD/android-sdk/tools/
         export ANDROID_SDK_PLATFORM_TOOLS_PATH=$PWD/android-sdk/platform-tools/
