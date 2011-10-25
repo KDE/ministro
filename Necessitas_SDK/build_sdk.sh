@@ -582,40 +582,40 @@ function makeInstallMinGWLibs
 function prepareNDKs
 {
     # repack official windows NDK
-    if [ ! -f $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.${ANDROID_NDK_MAJOR_VERSION}/data/android-ndk-${ANDROID_NDK_VERSION}-windows.7z ]
-    then
-        downloadIfNotExists android-ndk-${ANDROID_NDK_VERSION}-windows.zip http://dl.google.com/android/ndk/android-ndk-${ANDROID_NDK_VERSION}-windows.zip
-        rm -fr android-ndk-${ANDROID_NDK_VERSION}
-        unzip android-ndk-${ANDROID_NDK_VERSION}-windows.zip
-        createArchive android-ndk-${ANDROID_NDK_VERSION} android-ndk-${ANDROID_NDK_VERSION}-windows.7z
-        mkdir -p $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.${ANDROID_NDK_MAJOR_VERSION}/data
-        mv android-ndk-${ANDROID_NDK_VERSION}-windows.7z $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.${ANDROID_NDK_MAJOR_VERSION}/data/android-ndk-${ANDROID_NDK_VERSION}-windows.7z
-        rm -fr android-ndk-${ANDROID_NDK_VERSION}
-    fi
+#     if [ ! -f $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.${ANDROID_NDK_MAJOR_VERSION}/data/android-ndk-${ANDROID_NDK_VERSION}-windows.7z ]
+#     then
+#         downloadIfNotExists android-ndk-${ANDROID_NDK_VERSION}-windows.zip http://dl.google.com/android/ndk/android-ndk-${ANDROID_NDK_VERSION}-windows.zip
+#         rm -fr android-ndk-${ANDROID_NDK_VERSION}
+#         unzip android-ndk-${ANDROID_NDK_VERSION}-windows.zip
+#         createArchive android-ndk-${ANDROID_NDK_VERSION} android-ndk-${ANDROID_NDK_VERSION}-windows.7z
+#         mkdir -p $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.${ANDROID_NDK_MAJOR_VERSION}/data
+#         mv android-ndk-${ANDROID_NDK_VERSION}-windows.7z $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.${ANDROID_NDK_MAJOR_VERSION}/data/android-ndk-${ANDROID_NDK_VERSION}-windows.7z
+#         rm -fr android-ndk-${ANDROID_NDK_VERSION}
+#     fi
 
     # repack official mac NDK
-    if [ ! -f $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.${ANDROID_NDK_MAJOR_VERSION}/data/android-ndk-${ANDROID_NDK_VERSION}-darwin-x86.7z ]
-    then
-        downloadIfNotExists android-ndk-${ANDROID_NDK_VERSION}-darwin-x86.tar.bz2 http://dl.google.com/android/ndk/android-ndk-${ANDROID_NDK_VERSION}-darwin-x86.tar.bz2
-        rm -fr android-ndk-${ANDROID_NDK_VERSION}
-        tar xjvf android-ndk-${ANDROID_NDK_VERSION}-darwin-x86.tar.bz2
-        createArchive android-ndk-${ANDROID_NDK_VERSION} android-ndk-${ANDROID_NDK_VERSION}-darwin-x86.7z
-        mkdir -p $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.${ANDROID_NDK_MAJOR_VERSION}/data
-        mv android-ndk-${ANDROID_NDK_VERSION}-darwin-x86.7z $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.${ANDROID_NDK_MAJOR_VERSION}/data/android-ndk-${ANDROID_NDK_VERSION}-darwin-x86.7z
-        rm -fr android-ndk-${ANDROID_NDK_VERSION}
-    fi
+#     if [ ! -f $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.${ANDROID_NDK_MAJOR_VERSION}/data/android-ndk-${ANDROID_NDK_VERSION}-darwin-x86.7z ]
+#     then
+#         downloadIfNotExists android-ndk-${ANDROID_NDK_VERSION}-darwin-x86.tar.bz2 http://dl.google.com/android/ndk/android-ndk-${ANDROID_NDK_VERSION}-darwin-x86.tar.bz2
+#         rm -fr android-ndk-${ANDROID_NDK_VERSION}
+#         tar xjvf android-ndk-${ANDROID_NDK_VERSION}-darwin-x86.tar.bz2
+#         createArchive android-ndk-${ANDROID_NDK_VERSION} android-ndk-${ANDROID_NDK_VERSION}-darwin-x86.7z
+#         mkdir -p $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.${ANDROID_NDK_MAJOR_VERSION}/data
+#         mv android-ndk-${ANDROID_NDK_VERSION}-darwin-x86.7z $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.${ANDROID_NDK_MAJOR_VERSION}/data/android-ndk-${ANDROID_NDK_VERSION}-darwin-x86.7z
+#         rm -fr android-ndk-${ANDROID_NDK_VERSION}
+#     fi
 
     # repack official linux-x86 NDK
-    if [ ! -f $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.${ANDROID_NDK_MAJOR_VERSION}/data/android-ndk-${ANDROID_NDK_VERSION}-linux-x86.7z ]
-    then
-        downloadIfNotExists android-ndk-${ANDROID_NDK_VERSION}-linux-x86.tar.bz2 http://dl.google.com/android/ndk/android-ndk-${ANDROID_NDK_VERSION}-linux-x86.tar.bz2
-        rm -fr android-ndk-${ANDROID_NDK_VERSION}
-        tar xjvf android-ndk-${ANDROID_NDK_VERSION}-linux-x86.tar.bz2
-        createArchive android-ndk-${ANDROID_NDK_VERSION} android-ndk-${ANDROID_NDK_VERSION}-linux-x86.7z
-        mkdir -p $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.${ANDROID_NDK_MAJOR_VERSION}/data
-        mv android-ndk-${ANDROID_NDK_VERSION}-linux-x86.7z $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.${ANDROID_NDK_MAJOR_VERSION}/data/android-ndk-${ANDROID_NDK_VERSION}-linux-x86.7z
-        rm -fr android-ndk-${ANDROID_NDK_VERSION}
-    fi
+#     if [ ! -f $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.${ANDROID_NDK_MAJOR_VERSION}/data/android-ndk-${ANDROID_NDK_VERSION}-linux-x86.7z ]
+#     then
+#         downloadIfNotExists android-ndk-${ANDROID_NDK_VERSION}-linux-x86.tar.bz2 http://dl.google.com/android/ndk/android-ndk-${ANDROID_NDK_VERSION}-linux-x86.tar.bz2
+#         rm -fr android-ndk-${ANDROID_NDK_VERSION}
+#         tar xjvf android-ndk-${ANDROID_NDK_VERSION}-linux-x86.tar.bz2
+#         createArchive android-ndk-${ANDROID_NDK_VERSION} android-ndk-${ANDROID_NDK_VERSION}-linux-x86.7z
+#         mkdir -p $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.${ANDROID_NDK_MAJOR_VERSION}/data
+#         mv android-ndk-${ANDROID_NDK_VERSION}-linux-x86.7z $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.${ANDROID_NDK_MAJOR_VERSION}/data/android-ndk-${ANDROID_NDK_VERSION}-linux-x86.7z
+#         rm -fr android-ndk-${ANDROID_NDK_VERSION}
+#     fi
 
      if [ $BUILD_ANDROID_GIT_NDK = 1 ]
      then

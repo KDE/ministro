@@ -4,8 +4,8 @@ function removeUnusedPackages
     # x86 support needs much more love than just a compilation, QtCreator needs to handle it correctly
     rm -fr $TEMP_PATH/out/necessitas/sdk_src/org.kde.necessitas.android.qt.x86
 
-    # Wait until Linaro toolchain is ready
-    rm -fr $TEMP_PATH/out/necessitas/sdk_src/org.kde.necessitas.misc.ndk.ma_r6
+    # Linaro toolchain is ready
+    rm -fr $TEMP_PATH/out/necessitas/sdk_src/org.kde.necessitas.misc.ndk.r6
 
     # Do we really need this packages? No, but they're quite handy!
     rm -fr $TEMP_PATH/out/necessitas/sdk_src/org.kde.necessitas.misc.ndk.gdb_head

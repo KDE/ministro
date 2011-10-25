@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <Package>
-    <DisplayName>Android NDK-@@ANDROID_NDK_VERSION@@ linaro 4.6-2011-10</DisplayName>
-    <Description>Android NDK-@@ANDROID_NDK_VERSION@@, linaro 4.6-2011-10 and Google 4.4.3, includes binutils 2.10.1 and gdb 7.3.50.20110709. If you select this then there is no need to install gdb package</Description>
+    <DisplayName>Android NDK-@@ANDROID_NDK_VERSION@@ Linaro 4.6-2011-10</DisplayName>
+    <Description>Android NDK-@@ANDROID_NDK_VERSION@@, Linaro 4.6-2011-10 and Google 4.4.3, includes binutils 2.10.1 and gdb 7.3.50.20110709</Description>
     <Version>6.1.0-@@ANDROID_NDK_VERSION@@</Version>
     <ReleaseDate>@@TODAY@@</ReleaseDate>
     <Name>org.kde.necessitas.misc.ndk.ma_@@ANDROID_NDK_MAJOR_VERSION@@</Name>
