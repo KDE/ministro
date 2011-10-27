@@ -1630,7 +1630,10 @@ function prepareSDKBinary
     # Work around mac bug. qt_menu.nib doesn't get copied to the build, nor to the app.
     # https://bugreports.qt.nokia.com//browse/QTBUG-5952
     if [ "$OSTYPE_MAJOR" = "darwin" ] ; then
-        cp -rf $QT_SRCDIR/src/gui/mac/qt_menu.nib $REPO_SRC_PATH/necessitas-sdk-installer$HOST_QT_CONFIG$EXE_EXT.app/Contents/Resources/
+        pushd $REPO_SRC_PATH
+        $SHARED_QT_PATH/bin/macdeployqt necessitas-sdk-installer$HOST_QT_CONFIG.app
+        popd
+        cp -rf $QT_SRCDIR/src/gui/mac/qt_menu.nib $REPO_SRC_PATH/necessitas-sdk-installer$HOST_QT_CONFIG.app/Contents/Resources/
     fi
     mkdir sdkmaintenance
     pushd sdkmaintenance
@@ -1806,7 +1809,7 @@ prepareNecessitasQt
 # TODO :: Fix webkit build in Windows (-no-video fails) and Mac OS X (debug-and-release config incorrectly used and fails)
 # git clone often fails for webkit
 # Webkit is broken currently.
-#prepareNecessitasQtWebkit
+prepareNecessitasQtWebkit
 
 if [ "$OSTYPE_MAJOR" != "msys" ] ; then
     prepareNecessitasQtMobility # if [[ `gcc --version` =~ .*llvm.* ]]; => syntax error near `=~'
@@ -1822,8 +1825,8 @@ prepareSDKBinary
 if [ "$MAKE_DEBUG_HOST_APPS" = "1" ] ; then
     prepareHostQt -d
     prepareNecessitasQtCreator
-#     prepareSdkInstallerTools
-#     prepareSDKBinary
+    prepareSdkInstallerTools
+    prepareSDKBinary
 fi
 
 removeUnusedPackages
