@@ -297,7 +297,8 @@ function prepareHostQt
         pushd static-build$HOST_QT_CONFIG
     fi
     STATIC_QT_PATH=$PWD
-    if [ ! -f all_done ]
+#     if [ ! -f all_done ]
+    if [ "1" = "0" ]
     then
         pushd $QT_SRCDIR
         git checkout $HOST_QT_BRANCH
@@ -424,7 +425,10 @@ function prepareNecessitasQtCreator
 #            ../make-3.82/build-mingw.sh
 #            popd
 #            cp android-various/make-3.82-build/make.exe $QTC_INST_PATH/bin/
-            cp /usr/local/bin/ma-make.exe $QTC_INST_PATH/bin/make.exe
+            cp -f /usr/local/bin/ma-make.exe $QTC_INST_PATH/bin/make.exe
+            # Odd, make.exe has only recently picked up these dll dependencies?
+            cp -f /usr/local/bin/libiconv-2.dll $QTC_INST_PATH/bin/
+            cp -f /usr/bin/libpthread-2.dll $QTC_INST_PATH/bin/
         else
             if [ "$OSTYPE_MAJOR" = "linux-gnu" ]; then
                 mkdir -p $QTC_INST_PATH/Qt/lib
@@ -569,42 +573,6 @@ function makeInstallMinGWLibs
 
 function prepareNDKs
 {
-    # repack official windows NDK
-    if [ "0" = "1" -a ! -f $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.${ANDROID_NDK_MAJOR_VERSION}/data/android-ndk-${ANDROID_NDK_VERSION}-windows.7z ]
-    then
-        downloadIfNotExists android-ndk-${ANDROID_NDK_VERSION}-windows.zip http://dl.google.com/android/ndk/android-ndk-${ANDROID_NDK_VERSION}-windows.zip
-        rm -fr android-ndk-${ANDROID_NDK_VERSION}
-        unzip android-ndk-${ANDROID_NDK_VERSION}-windows.zip
-        createArchive android-ndk-${ANDROID_NDK_VERSION} android-ndk-${ANDROID_NDK_VERSION}-windows.7z
-        mkdir -p $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.${ANDROID_NDK_MAJOR_VERSION}/data
-        mv android-ndk-${ANDROID_NDK_VERSION}-windows.7z $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.${ANDROID_NDK_MAJOR_VERSION}/data/android-ndk-${ANDROID_NDK_VERSION}-windows.7z
-        rm -fr android-ndk-${ANDROID_NDK_VERSION}
-    fi
-
-    # repack official mac NDK
-    if [ "0" = "1" -a ! -f $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.${ANDROID_NDK_MAJOR_VERSION}/data/android-ndk-${ANDROID_NDK_VERSION}-darwin-x86.7z ]
-    then
-        downloadIfNotExists android-ndk-${ANDROID_NDK_VERSION}-darwin-x86.tar.bz2 http://dl.google.com/android/ndk/android-ndk-${ANDROID_NDK_VERSION}-darwin-x86.tar.bz2
-        rm -fr android-ndk-${ANDROID_NDK_VERSION}
-        tar xjvf android-ndk-${ANDROID_NDK_VERSION}-darwin-x86.tar.bz2
-        createArchive android-ndk-${ANDROID_NDK_VERSION} android-ndk-${ANDROID_NDK_VERSION}-darwin-x86.7z
-        mkdir -p $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.${ANDROID_NDK_MAJOR_VERSION}/data
-        mv android-ndk-${ANDROID_NDK_VERSION}-darwin-x86.7z $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.${ANDROID_NDK_MAJOR_VERSION}/data/android-ndk-${ANDROID_NDK_VERSION}-darwin-x86.7z
-        rm -fr android-ndk-${ANDROID_NDK_VERSION}
-    fi
-
-    # repack official linux-x86 NDK
-    if [ "0" = "1" -a ! -f $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.${ANDROID_NDK_MAJOR_VERSION}/data/android-ndk-${ANDROID_NDK_VERSION}-linux-x86.7z ]
-    then
-        downloadIfNotExists android-ndk-${ANDROID_NDK_VERSION}-linux-x86.tar.bz2 http://dl.google.com/android/ndk/android-ndk-${ANDROID_NDK_VERSION}-linux-x86.tar.bz2
-        rm -fr android-ndk-${ANDROID_NDK_VERSION}
-        tar xjvf android-ndk-${ANDROID_NDK_VERSION}-linux-x86.tar.bz2
-        createArchive android-ndk-${ANDROID_NDK_VERSION} android-ndk-${ANDROID_NDK_VERSION}-linux-x86.7z
-        mkdir -p $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.${ANDROID_NDK_MAJOR_VERSION}/data
-        mv android-ndk-${ANDROID_NDK_VERSION}-linux-x86.7z $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.${ANDROID_NDK_MAJOR_VERSION}/data/android-ndk-${ANDROID_NDK_VERSION}-linux-x86.7z
-        rm -fr android-ndk-${ANDROID_NDK_VERSION}
-    fi
-
      if [ $BUILD_ANDROID_GIT_NDK = 1 ]
      then
          downloadIfNotExists android-ndk-${ANDROID_NDK_VERSION}-linux-x86.tar.bz2 http://dl.google.com/android/ndk/android-ndk-${ANDROID_NDK_VERSION}-linux-x86.tar.bz2
@@ -1669,13 +1637,13 @@ function prepareSDKBinary
     rm -fr *.7z
     if [ "$OSTYPE_MAJOR" = "msys" ] ; then
         mkdir temp
-        cp -a $REPO_SRC_PATH/necessitas-sdk-installer$HOST_QT_CONFIG$EXE_EXT temp/SDKMaintenanceToolBase.exe
+        cp -a $REPO_SRC_PATH/necessitas-sdk-installer${HOST_QT_CONFIG}${EXE_EXT} temp/SDKMaintenanceToolBase.exe
         createArchive temp sdkmaintenance-windows.7z
     else
         if [ "$OSTYPE_MAJOR" = "darwin" ] ; then
-            cp -a $REPO_SRC_PATH/necessitas-sdk-installer$HOST_QT_CONFIG$EXE_EXT.app .tempSDKMaintenanceTool
+            cp -a $REPO_SRC_PATH/necessitas-sdk-installer${HOST_QT_CONFIG}.app .tempSDKMaintenanceTool
         else
-            cp -a $REPO_SRC_PATH/necessitas-sdk-installer$HOST_QT_CONFIG$EXE_EXT .tempSDKMaintenanceTool
+            cp -a $REPO_SRC_PATH/necessitas-sdk-installer${HOST_QT_CONFIG} .tempSDKMaintenanceTool
         fi
         if [ "$OSTYPE_MAJOR" = "linux-gnu" ] ; then
                 createArchive . sdkmaintenance-linux-x86.7z
@@ -1838,7 +1806,7 @@ prepareNecessitasQt
 # TODO :: Fix webkit build in Windows (-no-video fails) and Mac OS X (debug-and-release config incorrectly used and fails)
 # git clone often fails for webkit
 # Webkit is broken currently.
-prepareNecessitasQtWebkit
+#prepareNecessitasQtWebkit
 
 if [ "$OSTYPE_MAJOR" != "msys" ] ; then
     prepareNecessitasQtMobility # if [[ `gcc --version` =~ .*llvm.* ]]; => syntax error near `=~'
@@ -1854,8 +1822,8 @@ prepareSDKBinary
 if [ "$MAKE_DEBUG_HOST_APPS" = "1" ] ; then
     prepareHostQt -d
     prepareNecessitasQtCreator
-    prepareSdkInstallerTools
-    prepareSDKBinary
+#     prepareSdkInstallerTools
+#     prepareSDKBinary
 fi
 
 removeUnusedPackages
