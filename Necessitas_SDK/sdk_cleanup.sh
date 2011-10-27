@@ -5,7 +5,7 @@ function removeUnusedPackages
     rm -fr $TEMP_PATH/out/necessitas/sdk_src/org.kde.necessitas.android.qt.x86
 
     # Linaro toolchain is ready
-    rm -fr $TEMP_PATH/out/necessitas/sdk_src/org.kde.necessitas.misc.ndk.r6
+    rm -fr $TEMP_PATH/out/necessitas/sdk_src/org.kde.necessitas.misc.ndk.ma_r6
 
     # Do we really need this packages? No, but they're quite handy!
     rm -fr $TEMP_PATH/out/necessitas/sdk_src/org.kde.necessitas.misc.ndk.gdb_head
