@@ -424,7 +424,7 @@ function prepareNecessitasQtCreator
 #            ../make-3.82/build-mingw.sh
 #            popd
 #            cp android-various/make-3.82-build/make.exe $QTC_INST_PATH/bin/
-            cp -f /usr/local/bin/ma-make.exe $QTC_INST_PATH/bin/make.exe
+            cp -f /usr/local/bin/ma-make.exe $QTC_INST_PATH/bin/ma-make.exe
             # Odd, make.exe has only recently picked up these dll dependencies?
             cp -f /usr/local/bin/libiconv-2.dll $QTC_INST_PATH/bin/
             cp -f /usr/bin/libpthread-2.dll $QTC_INST_PATH/bin/
