@@ -415,14 +415,14 @@ function mixPythonWithNDK
     pushd /usr/ndki
     mkdir android-ndk-${NDK_VER}
     pushd android-ndk-${NDK_VER}
-    find $REPO_SRC_PATH -name "gnu-lib*${GCC_VER}.tar.bz2" | xargs -I @ tar -xjvf $1 @
+    find $REPO_SRC_PATH -name "gnu-lib*${GCC_VER}.tar.bz2" | while read i ; do tar -xjvf "$i" ; done
     tar -jxvf $REPO_SRC_PATH/arm-linux-androideabi-${GCC_VER}-${BUILD_NDK}.tar.bz2
     tar -jxvf $REPO_SRC_PATH/x86-${GCC_VER}-${BUILD_NDK}.tar.bz2
     # The official NDK uses thumb version of libstdc++ for armeabi and
     # an arm version for armeabi-v7a, so copy the appropriate one over.
     # Copy new libstdc++'s to sources/cxx-stl${SRCS_SUFFIX}
     if [ ! "$SRCS_SUFFIX" = "" ] ; then
-	mv sources/cxx-stl sources/cxx-stl${SRCS_SUFFIX}
+       mv sources/cxx-stl sources/cxx-stl${SRCS_SUFFIX}
     fi
 #     [ ! -d sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi/ ] || mkdir -p sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi/
 #     [ ! -d sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi-v7a/ ] || mkdir -p sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi-v7a/
