@@ -125,15 +125,13 @@ function makeNDKForArch
     else
         ARCH_ABI=$ARCH
     fi
-    if [ ! -f /usr/ndkb/${ARCH_ABI}-${GCC_VER}-${BUILD_NDK}.tar.bz2 ]; then
+#     if [ ! -f /usr/ndkb/${ARCH_ABI}-${GCC_VER}-${BUILD_NDK}.tar.bz2 ]; then
         $NDK/build/tools/rebuild-all-prebuilt.sh --arch=$ARCH --patches-dir=/tmp/ndk-tc-patches --build-dir=/usr/ndkb --verbose --package-dir=/usr/ndkb --gcc-version=$GCC_VER --gdb-path=$GDB_ROOT_PATH_USED --gdb-version=$GDB_VER --mpfr-version=2.4.2 --gmp-version=4.3.2 --binutils-version=2.20.1 --toolchain-src-dir=$TCSRC --gdb-with-python=$PYTHONVER
-    else
-        echo "Skipping NDK build, already done."
-	echo /usr/ndkb/${ARCH_ABI}-${GCC_VER}-${BUILD_NDK}.tar.bz2
-    fi
-    cp /usr/ndkb/${ARCH_ABI}-${GCC_VER}-${BUILD_NDK}.tar.bz2 $REPO_SRC_PATH/${ARCH_ABI}-${GCC_VER}-${BUILD_NDK}.tar.bz2
-    cp /usr/ndkb/${ARCH_ABI}-${GCC_VER}-gdbserver.tar.bz2 $REPO_SRC_PATH/${ARCH_ABI}-${GCC_VER}-gdbserver.tar.bz2
-    cp /usr/ndkb/gnu-lib*.bz2 $REPO_SRC_PATH/
+#     else
+#         echo "Skipping NDK build, already done."
+# 	echo /usr/ndkb/${ARCH_ABI}-${GCC_VER}-${BUILD_NDK}.tar.bz2
+#     fi
+    cp /usr/ndkb/*.bz2 $REPO_SRC_PATH/
 }
 
 function makeNDK
@@ -415,7 +413,7 @@ function mixPythonWithNDK
     pushd /usr/ndki
     mkdir android-ndk-${NDK_VER}
     pushd android-ndk-${NDK_VER}
-    find $REPO_SRC_PATH -name "gnu-lib*${GCC_VER}.tar.bz2" | while read i ; do tar -xjvf "$i" ; done
+    find $REPO_SRC_PATH -name "*lib*${GCC_VER}.tar.bz2" | while read i ; do tar -xjvf "$i" ; done
     tar -jxvf $REPO_SRC_PATH/arm-linux-androideabi-${GCC_VER}-${BUILD_NDK}.tar.bz2
     tar -jxvf $REPO_SRC_PATH/x86-${GCC_VER}-${BUILD_NDK}.tar.bz2
     # The official NDK uses thumb version of libstdc++ for armeabi and
@@ -424,6 +422,11 @@ function mixPythonWithNDK
     if [ ! "$SRCS_SUFFIX" = "" ] ; then
        mv sources/cxx-stl sources/cxx-stl${SRCS_SUFFIX}
     fi
+    cp sources/cxx-stl-google/stlport/* sources/cxx-stl${SRCS_SUFFIX}/stlport
+    cp -rf sources/cxx-stl-google/stlport/src sources/cxx-stl${SRCS_SUFFIX}/stlport/
+    cp -rf sources/cxx-stl-google/stlport/stlport sources/cxx-stl${SRCS_SUFFIX}/stlport/
+    cp -rf sources/cxx-stl-google/stlport/test sources/cxx-stl${SRCS_SUFFIX}/stlport/
+    cp -rf sources/cxx-stl-google/system sources/cxx-stl${SRCS_SUFFIX}/
 #     [ ! -d sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi/ ] || mkdir -p sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi/
 #     [ ! -d sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi-v7a/ ] || mkdir -p sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi-v7a/
 #     [ ! -d sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/x86/ ] || mkdir -p sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/x86/
@@ -506,8 +509,8 @@ fi
 
 makeInstallPython
 unpackGoogleNDK
-# makeNDK 4.4.3
-# makeNDK 4.6.2
+makeNDK 4.4.3
+makeNDK 4.6.2
 # must do 4.6.2 before 4.4.3 due to how libstdc++ is unpacked.
 mixPythonWithNDK 4.6.2
 mixPythonWithNDK 4.4.3
