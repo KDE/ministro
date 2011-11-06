@@ -379,7 +379,7 @@ function unpackGoogleOrLinuxNDK
     else
         downloadIfNotExists android-ndk-r6b-gdb-7.3.50.20110709-linux-x86.7z http://mingw-and-ndk.googlecode.com/files/android-ndk-r6b-gdb-7.3.50.20110709-linux-x86.7z
         7za x android-ndk-r6b-gdb-7.3.50.20110709-linux-x86.7z
-        pushd andorid-ndk-${NDK_VER}
+        pushd android-ndk-${NDK_VER}
         rm ndk-stack
         find . -name linux-x86 | xargs rm -rf
         find . -name "python*" | xargs rm -rf
@@ -458,6 +458,7 @@ function mixPythonWithNDK
             7za x $REPO_SRC_PATH/python-${BUILD_PYTHON}.7z
         popd
     fi
+    tar -jxvf $REPO_SRC_PATH/ndk-stack*.tar.bz2
 
     popd
     popd
@@ -514,8 +515,8 @@ fi
 
 makeInstallPython
 unpackGoogleOrLinuxNDK
-makeNDK 4.4.3
-makeNDK 4.6.2
+# makeNDK 4.4.3
+# makeNDK 4.6.2
 # must do 4.6.2 before 4.4.3 due to how libstdc++ is unpacked.
 mixPythonWithNDK 4.6.2
 mixPythonWithNDK 4.4.3
