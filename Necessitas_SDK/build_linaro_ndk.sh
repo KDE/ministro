@@ -117,13 +117,16 @@ function makeNDKForArch
     ARCH=$1
     ROOTDIR=$2
     REPO_SRC_PATH=$3
+    if [ ! "$4" = "" ] ; then
+        GCC_VER=$4
+    fi
     if [ "$ARCH" = "arm" ] ; then
         ARCH_ABI=$ARCH-linux-androideabi
     else
         ARCH_ABI=$ARCH
     fi
-    if [ ! -f /usr/ndkb/${ARCH_ABI}-${GCC_VER}-gdbserver.tar.bz2 -o ! -f /usr/ndkb/${ARCH_ABI}-${GCC_VER}-${BUILD_NDK}.tar.bz2 ]; then
-	$NDK/build/tools/rebuild-all-prebuilt.sh --arch=$ARCH --patches-dir=/tmp/ndk-tc-patches --build-dir=/usr/ndkb --verbose --package-dir=/usr/ndkb --gcc-version=$GCC_VER --gdb-path=$GDB_ROOT_PATH --gdb-version=$GDB_VER --mpfr-version=2.4.2 --gmp-version=4.3.2 --binutils-version=2.20.1 --toolchain-src-dir=$TCSRC --gdb-with-python=$PYTHONVER
+    if [ ! -f /usr/ndkb/${ARCH_ABI}-${GCC_VER}-${BUILD_NDK}.tar.bz2 ]; then
+        $NDK/build/tools/rebuild-all-prebuilt.sh --arch=$ARCH --patches-dir=/tmp/ndk-tc-patches --build-dir=/usr/ndkb --verbose --package-dir=/usr/ndkb --gcc-version=$GCC_VER --gdb-path=$GDB_ROOT_PATH_USED --gdb-version=$GDB_VER --mpfr-version=2.4.2 --gmp-version=4.3.2 --binutils-version=2.20.1 --toolchain-src-dir=$TCSRC --gdb-with-python=$PYTHONVER
     else
         echo "Skipping NDK build, already done."
 	echo /usr/ndkb/${ARCH_ABI}-${GCC_VER}-${BUILD_NDK}.tar.bz2
@@ -136,6 +139,16 @@ function makeNDKForArch
 function makeNDK
 {
     PYTHONVER=`pwd`/Python-2.7.1/python-build/install-python-${BUILD_PYTHON}
+
+    if [ ! "$1" = "" ] ; then
+        GCC_VER=$1
+    fi
+
+    if [ "$GCC_VER" = "4.4.3" ] ; then
+        GCC_LINARO=0
+    else
+        GCC_LINARO=1
+    fi
 
     mkdir build-${BUILD_NDK}
     pushd build-${BUILD_NDK}
@@ -227,70 +240,27 @@ function makeNDK
         pushd ppl
         downloadIfNotExists ppl-0.11.2.tar.bz2 ftp://ftp.cs.unipr.it/pub/ppl/releases/0.11.2/ppl-0.11.2.tar.bz2
         tar xjvf ppl-0.11.2.tar.bz2
+        downloadIfNotExists ppl-0.10.2.tar.bz2 ftp://ftp.cs.unipr.it/pub/ppl/releases/0.10.2/ppl-0.10.2.tar.bz2
+        tar xjvf ppl-0.10.2.tar.bz2
         popd
     fi
 
     if [ ! -d "cloog" ]
     then
         mkdir cloog
-	pushd cloog
-#        downloadIfNotExists cloog-0.16.3.tar.gz http://www.bastoul.net/cloog/pages/download/cloog-0.16.3.tar.gz
-	downloadIfNotExists cloog-0.16.3.tar.gz http://www.kotnet.org/~skimo/cloog/cloog-0.16.3.tar.gz
-	tar xzvf cloog-0.16.3.tar.gz
-	popd
+        pushd cloog
+        downloadIfNotExists cloog-0.16.3.tar.gz http://www.bastoul.net/cloog/pages/download/cloog-0.16.3.tar.gz
+#        downloadIfNotExists cloog-0.16.3.tar.gz http://www.kotnet.org/~skimo/cloog/cloog-0.16.3.tar.gz
+        tar xzvf cloog-0.16.3.tar.gz
+        downloadIfNotExists cloog-ppl-0.15.11.tar.gz http://gcc-uk.internet.bs/infrastructure/cloog-ppl-0.15.11.tar.gz
+        tar xzvf cloog-ppl-0.15.11.tar.gz
+        popd
     fi
 
     rm -rf /tmp/ndk-tc-patches
+    rm -f patched
     mkdir /tmp/ndk-tc-patches || echo "Can't mkdir"
     cp -rf $NDK/build/tools/toolchain-patches/* /tmp/ndk-tc-patches
-
-    if [ "$GCC_LINARO" = "1" ] ; then
-        GCCSRCDIR="gcc"
-	rm -rf $GCCSRCDIR/gcc-4.6.2
-	if [ ! -d $GCCSRCDIR/gcc-4.6.2 ]
-        then
-            mkdir $GCCSRCDIR
-            pushd $GCCSRCDIR
-            downloadIfNotExists gcc-linaro-4.6-2011.10.tar.bz2 http://launchpad.net/gcc-linaro/4.6/4.6-2011.10/+download/gcc-linaro-4.6-2011.10.tar.bz2
-            tar xjvf gcc-linaro-4.6-2011.10.tar.bz2
-	    mv gcc-linaro-4.6-2011.10 gcc-4.6.2
-            popd
-            GCC_NEEDS_PATCHING=1
-        fi
-#        GCCREPO=git://android.git.linaro.org/toolchain/gcc.git
-        rm -rf /tmp/ndk-tc-patches/gcc/*
-        if [ "$GCC_NEEDS_PATCHING" = "1" ] ; then
-	    cp $NDK/build/tools/toolchain-patches-linaro-4.6-android-and-win32/*.patch /tmp/ndk-tc-patches/gcc
-	fi
-    else
-        GCCSRCDIR="gcc"
-        GCCREPO=git://gitorious.org/toolchain-mingw-android/mingw-android-toolchain-gcc.git
-        if [ ! -d "$GCCSRCDIR" ]
-        then
-            git clone $GCCREPO $GCCSRCDIR || error_msg "Can't clone $GCCREPO -> $GCCSRCDIR"
-        fi
-    fi
-    if [ "$GCC_LINARO" = "1" ] ; then
-        if [ -d .git ] ; then
-            git branch -D windows || echo "Windows branch didn't exist, not a problem."
-            git checkout -b windows
-            git am $NDK/build/tools/toolchain-patches-linaro-4.6-android-and-win32/*.patch
-            rm -rf /tmp/ndk-tc-patches/gcc
-        fi
-    else
-        # reset so that ndk r6b patches apply (usually this will undo the previously applied patches).
-        if [ "$GCC_LINARO" = "0" ] ; then
-            pushd $GCCSRCDIR
-                git reset --hard
-                git checkout --force integration
-                if [ -n "$GCC_GIT_DATE" ] ; then
-                    REVISION=`git rev-list -n 1 --until="$GCC_GIT_DATE" HEAD`
-                    echo "Using sources for date '$GCC_GIT_DATE': toolchain/$1 revision $REVISION"
-                    git checkout $REVISION
-                fi
-            popd
-        fi
-    fi
 
     mkdir gdb
     if [ ! -d "ma-gdb" ]
@@ -300,7 +270,47 @@ function makeNDK
     pushd ma-gdb
         git checkout $GDB_BRANCH
         git reset --hard
-        GDB_ROOT_PATH=$PWD/$GDB_ROOT_PATH
+        GDB_ROOT_PATH_USED=$PWD/$GDB_ROOT_PATH
+    popd
+
+    GCCSRCDIR="gcc"
+    GCCREPO=git://gitorious.org/toolchain-mingw-android/mingw-android-toolchain-gcc.git
+    if [ ! -d "$GCCSRCDIR" ]
+    then
+        git clone $GCCREPO $GCCSRCDIR || error_msg "Can't clone $GCCREPO -> $GCCSRCDIR"
+    fi
+
+    # reset so that ndk r6b patches apply (usually this will undo the previously applied patches).
+    pushd $GCCSRCDIR
+    git reset --hard
+    git checkout --force integration
+    if [ -n "$GCC_GIT_DATE" ] ; then
+        REVISION=`git rev-list -n 1 --until="$GCC_GIT_DATE" HEAD`
+        echo "Using sources for date '$GCC_GIT_DATE': toolchain/$1 revision $REVISION"
+        git checkout $REVISION
+    fi
+
+    rm -rf gcc-4.6.2
+    if [ ! -d gcc-4.6.2 ]
+    then
+        if [ "$GCCREPOLINARO" = "" ] ; then
+            downloadIfNotExists gcc-linaro-4.6-2011.10.tar.bz2 http://launchpad.net/gcc-linaro/4.6/4.6-2011.10/+download/gcc-linaro-4.6-2011.10.tar.bz2
+            tar xjvf gcc-linaro-4.6-2011.10.tar.bz2
+            mv gcc-linaro-4.6-2011.10 gcc-4.6.2
+            echo 4.6.2 > gcc-4.6.2/gcc/BASE-VER
+            mkdir -p /tmp/ndk-tc-patches/gcc
+            cp $NDK/build/tools/toolchain-patches-linaro-4.6-android-and-win32/*.patch /tmp/ndk-tc-patches/gcc
+        else
+            git clone $GCCREPOLINARO gcc-4.6.2 || error_msg "Can't clone $GCCREPO -> $GCCSRCDIR"
+        fi
+    fi
+    pushd gcc-4.6.2
+    if [ -d .git ] ; then
+        git branch -D windows || echo "Windows branch didn't exist, not a problem."
+        git checkout -b windows
+        git am $NDK/build/tools/toolchain-patches-linaro-4.6-android-and-win32/*.patch
+    fi
+    popd
     popd
 
     TCSRC=$PWD
@@ -315,12 +325,56 @@ function makeNDK
     NDK=`pwd`/ndk
     ANDROID_NDK_ROOT=$NDK
 
-    echo GDB_ROOT_PATH $GDB_ROOT_PATH
+    echo GDB_ROOT_PATH $GDB_ROOT_PATH_USED
     PYTHONHOME=""
     unset PYTHONHOME
-    makeNDKForArch arm $ROOTDIR $REPO_SRC_PATH
-###    makeNDKForArch x86 $ROOTDIR $REPO_SRC_PATH
+    makeNDKForArch arm $ROOTDIR $REPO_SRC_PATH $GCC_VER
+    makeNDKForArch x86 $ROOTDIR $REPO_SRC_PATH $GCC_VER
 
+    popd
+}
+
+function compressFinalNDK
+{
+    pushd /usr/ndki
+    7za a -mx9 android-ndk-${NDK_VER}-gdb-${GDB_VER}-${BUILD_NDK}.7z android-ndk-${NDK_VER}
+    mv android-ndk-${NDK_VER}-gdb-${GDB_VER}-${BUILD_NDK}.7z $REPO_SRC_PATH
+    popd
+}
+
+function unpackGoogleNDK
+{
+    if [ "$OSTYPE_MAJOR" = "msys" ] ; then
+        mkdir -p /usr/ndki
+    else
+        sudo mkdir -p /usr/ndki
+        sudo chmod 777 /usr/ndki
+    fi
+    pushd /usr/ndki
+    rm -rf android-ndk-${NDK_VER}
+
+    if [ ! -d android-ndk-${NDK_VER} ] ; then
+        if [ "$OSTYPE_MAJOR" = "msys" ] ; then
+            downloadIfNotExists android-ndk-${NDK_VER}-windows.zip http://dl.google.com/android/ndk/android-ndk-${NDK_VER}-windows.zip
+            unzip android-ndk-${NDK_VER}-windows.zip
+        else
+            if [ "$OSTYPE_MAJOR" = "linux-gnu" ] ; then
+                downloadIfNotExists android-ndk-${NDK_VER}-linux-x86.tar.bz2 http://dl.google.com/android/ndk/android-ndk-${NDK_VER}-linux-x86.tar.bz2
+                tar xjvf android-ndk-${NDK_VER}-linux-x86.tar.bz2
+            else
+                downloadIfNotExists android-ndk-${NDK_VER}-darwin-x86.tar.bz2 http://dl.google.com/android/ndk/android-ndk-${NDK_VER}-darwin-x86.tar.bz2
+                tar xjvf android-ndk-${NDK_VER}-darwin-x86.tar.bz2
+            fi
+        fi
+    fi
+
+    pushd android-ndk-${NDK_VER}
+    # Copy my more robust (in the face of custom ROMs) ndk-gdb.
+    cp $NDK/ndk-gdb .
+    # Copy my cmd.exe compatible ndk-build.bat (note, there are other bits needed for this to work, so not yet)
+    cp $NDK/ndk-build.bat .
+    # Get rid of old and unused stuff.
+    rm -rf toolchains/arm-eabi-4.4.0
     popd
 }
 
@@ -328,6 +382,15 @@ function makeNDK
 # buggy (--keep-libstdc++ doesn't work right).
 function mixPythonWithNDK
 {
+    if [ ! "$1" = "" ] ; then
+       GCC_VER=$1
+    fi
+    if [ ! "$GCC_VER" = "4.4.3" ] ; then
+        SRCS_SUFFIX=-$GCC_VER
+    else
+        SRCS_SUFFIX=
+    fi
+
     if [ ! -f $REPO_SRC_PATH/python-${BUILD_PYTHON}.7z ]; then
        echo "Failed to find python, $REPO_SRC_PATH/python-${BUILD_PYTHON}.7z"
        exit 1
@@ -340,97 +403,52 @@ function mixPythonWithNDK
        echo "Failed to find arm toolchain, $REPO_SRC_PATH/arm-linux-androideabi-${GCC_VER}-${BUILD_NDK}.tar.bz2"
        exit 1
     fi
-    # x86 bits missing are not fatal (yet).
+    # x86 gdbserver fails to build.
 ###    if [ ! -f $REPO_SRC_PATH/x86-${GCC_VER}-gdbserver.tar.bz2 ]; then
 ###       echo "Failed to find x86 gdbserver, $REPO_SRC_PATH/x86-linux-androideabi-${GCC_VER}-gdbserver.tar.bz2"
 ###    fi
-###    if [ ! -f $REPO_SRC_PATH/x86-${GCC_VER}-${BUILD_NDK}.tar.bz2 ]; then
-###       echo "Failed to find x86 toolchain, $REPO_SRC_PATH/x86-linux-androideabi-${GCC_VER}-${BUILD_NDK}.tar.bz2"
-###    fi
-    if [ "$OSTYPE_MAJOR" = "msys" ] ; then
-        mkdir -p /usr/ndki
-    else
-        sudo mkdir -p /usr/ndki
-        sudo chmod 777 /usr/ndki
+    if [ ! -f $REPO_SRC_PATH/x86-${GCC_VER}-${BUILD_NDK}.tar.bz2 ]; then
+       echo "Failed to find x86 toolchain, $REPO_SRC_PATH/x86-linux-androideabi-${GCC_VER}-${BUILD_NDK}.tar.bz2"
     fi
-    if [ ! "$GCC_VER" = "4.4.3" ] ; then
-	SRCS_SUFFIX=-$GCC_VER
-    fi
-    rm -rf /usr/ndki/android-ndk-${NDK_VER}
     pushd /usr/ndki
     mkdir android-ndk-${NDK_VER}
     pushd android-ndk-${NDK_VER}
-    find $REPO_SRC_PATH -name "gnu-lib*.tar.bz2" | xargs -I @ tar -xjvf $1 @
+    find $REPO_SRC_PATH -name "gnu-lib*${GCC_VER}.tar.bz2" | xargs -I @ tar -xjvf $1 @
     if [ ! "$SRCS_SUFFIX" = "" ] ; then
 	mv sources/cxx-stl sources/cxx-stl$SRCS_SUFFIX
     fi
-    popd
-    if [ "$OSTYPE_MAJOR" = "msys" ] ; then
-	downloadIfNotExists android-ndk-${NDK_VER}-windows.zip http://dl.google.com/android/ndk/android-ndk-${NDK_VER}-windows.zip
-	unzip android-ndk-${NDK_VER}-windows.zip
-    else
-	if [ "$OSTYPE_MAJOR" = "linux-gnu" ] ; then
-            downloadIfNotExists android-ndk-${NDK_VER}-linux-x86.tar.bz2 http://dl.google.com/android/ndk/android-ndk-${NDK_VER}-linux-x86.tar.bz2
-            tar xjvf android-ndk-${NDK_VER}-linux-x86.tar.bz2
-        else
-            downloadIfNotExists android-ndk-${NDK_VER}-darwin-x86.tar.bz2 http://dl.google.com/android/ndk/android-ndk-${NDK_VER}-darwin-x86.tar.bz2
-            tar xjvf android-ndk-${NDK_VER}-darwin-x86.tar.bz2
-        fi
-    fi
-    pushd android-ndk-${NDK_VER}
     tar -jxvf $REPO_SRC_PATH/arm-linux-androideabi-${GCC_VER}-${BUILD_NDK}.tar.bz2
-###    tar -jxvf $REPO_SRC_PATH/x86-${GCC_VER}-${BUILD_NDK}.tar.bz2
+    tar -jxvf $REPO_SRC_PATH/x86-${GCC_VER}-${BUILD_NDK}.tar.bz2
     # The official NDK uses thumb version of libstdc++ for armeabi and
     # an arm version for armeabi-v7a, so copy the appropriate one over.
     # Copy new libstdc++'s to sources/cxx-stl${SRCS_SUFFIX}
-#    [ ! -d sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi/ ] || mkdir -p sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi/
-#    [ ! -d sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi-v7a/ ] || mkdir -p sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi-v7a/
-###    [ ! -d sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/x86/ ] || mkdir -p sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/x86/
-#    cp toolchains/arm-linux-androideabi-${GCC_VER}/prebuilt/${BUILD_NDK}/arm-linux-androideabi/lib/thumb/libstdc++.* sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi/
-#    cp toolchains/arm-linux-androideabi-${GCC_VER}/prebuilt/${BUILD_NDK}/arm-linux-androideabi/lib/armv7-a/libstdc++.* sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi-v7a/
-###    cp toolchains/x86-${GCC_VER}/prebuilt/${BUILD_NDK}/i686-android-linux/lib/libstdc++.* sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/x86/
-    # Copy my more robust (in the face of custom ROMs) ndk-gdb.
-    cp $NDK/ndk-gdb .
-    # Copy my cmd.exe compatible ndk-build.bat (note, there are other bits needed for this to work, so not yet)
-    # cp $NDK/ndk-build.bat .
+    [ ! -d sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi/ ] || mkdir -p sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi/
+    [ ! -d sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi-v7a/ ] || mkdir -p sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi-v7a/
+    [ ! -d sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/x86/ ] || mkdir -p sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/x86/
+    cp toolchains/arm-linux-androideabi-${GCC_VER}/prebuilt/${BUILD_NDK}/arm-linux-androideabi/lib/thumb/libstdc++.* sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi/
+    cp toolchains/arm-linux-androideabi-${GCC_VER}/prebuilt/${BUILD_NDK}/arm-linux-androideabi/lib/armv7-a/libstdc++.* sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi-v7a/
+    cp toolchains/x86-${GCC_VER}/prebuilt/${BUILD_NDK}/i686-android-linux/lib/libstdc++.* sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/x86/
     tar -jxvf $REPO_SRC_PATH/arm-linux-androideabi-${GCC_VER}-gdbserver.tar.bz2
+    if [ -f $REPO_SRC_PATH/x86-${GCC_VER}-gdbserver.tar.bz2 ] ; then
+        tar -jxvf $REPO_SRC_PATH/x86-${GCC_VER}-gdbserver.tar.bz2
+    fi
+    if [ ! "$SRCS_SUFFIX" = "" ] ; then
+        cp toolchains/x86-4.4.3/prebuilt/gdbserver toolchains/x86${SRCS_SUFFIX}/prebuilt/gdbserver
+    fi
 
-###    tar -jxvf $REPO_SRC_PATH/x86-${GCC_VER}-gdbserver.tar.bz2
-    cp toolchains/arm-linux-androideabi-${GCC_VER}/prebuilt/gdbserver toolchains/arm-linux-androideabi-${GCC_VER_OTHER}/prebuilt/gdbserver
-###    cp toolchains/x86-${GCC_VER}/prebuilt/gdbserver toolchains/x86-${GCC_VER_OTHER}/prebuilt/gdbserver
-
-    # Copy new gdb executables into bin of the original gcc.
-    cp toolchains/arm-linux-androideabi-${GCC_VER}/prebuilt/${BUILD_NDK}/bin/arm-linux-androideabi-gdb* toolchains/arm-linux-androideabi-${GCC_VER_OTHER}/prebuilt/${BUILD_NDK}/bin
-###    cp toolchains/x86-${GCC_VER}/prebuilt/${BUILD_NDK}/bin/i686-android-linux-gdb* toolchains/x86-${GCC_VER_OTHER}/prebuilt/${BUILD_NDK}/bin
-
-    # Copy python into all 4 toolchains.
+    # Copy python.
     if [ -d toolchains/arm-linux-androideabi-${GCC_VER}/prebuilt/${BUILD_NDK} ] ; then
         pushd toolchains/arm-linux-androideabi-${GCC_VER}/prebuilt/${BUILD_NDK}
             7za x $REPO_SRC_PATH/python-${BUILD_PYTHON}.7z
         popd
     fi
-###    if [ -d toolchains/x86-${GCC_VER}/prebuilt/${BUILD_NDK} ] ; then
-###        pushd toolchains/x86-${GCC_VER}/prebuilt/${BUILD_NDK}
-###            7za x $REPO_SRC_PATH/python-${BUILD_PYTHON}.7z
-###        popd
-###    fi
-    if [ -d toolchains/arm-linux-androideabi-${GCC_VER_OTHER}/prebuilt/${BUILD_NDK} ] ; then
-        pushd toolchains/arm-linux-androideabi-${GCC_VER_OTHER}/prebuilt/${BUILD_NDK}
+    if [ -d toolchains/x86-${GCC_VER}/prebuilt/${BUILD_NDK} ] ; then
+        pushd toolchains/x86-${GCC_VER}/prebuilt/${BUILD_NDK}
             7za x $REPO_SRC_PATH/python-${BUILD_PYTHON}.7z
         popd
     fi
-###    if [ -d toolchains/x86-${GCC_VER_OTHER}/prebuilt/${BUILD_NDK} ] ; then
-###        pushd toolchains/x86-${GCC_VER_OTHER}/prebuilt/${BUILD_NDK}
-###            7za x $REPO_SRC_PATH/python-${BUILD_PYTHON}.7z
-###        popd
-###    fi
 
-    # Get rid of old and unused stuff.
-    rm -rf toolchains/arm-eabi-4.4.0
-#    rm -rf toolchains/x86-${GCC_VER}
     popd
-    7za a -mx9 android-ndk-${NDK_VER}-gdb-${GDB_VER}-${BUILD_NDK}.7z android-ndk-${NDK_VER}
-    mv android-ndk-${NDK_VER}-gdb-${GDB_VER}-${BUILD_NDK}.7z $REPO_SRC_PATH
     popd
 }
 
@@ -484,7 +502,11 @@ if [ "$OSTYPE_MAJOR" = "darwin" ] ; then
 fi
 
 makeInstallPython
-makeNDK
-mixPythonWithNDK
+makeNDK 4.4.3
+makeNDK 4.6.2
+unpackGoogleNDK
+mixPythonWithNDK 4.4.3
+mixPythonWithNDK 4.6.2
+compressFinalNDK
 
 popd

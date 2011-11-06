@@ -256,7 +256,7 @@ function prepareHostQt
     HOST_QT_CONFIG=$1
     if [ ! -d qt-src ]
     then
-        if [ "$OSTYPE_MAJOR" = "msys" -o "$OSTYPE_MAJOR" = "darwin" ]
+        if [ "$OSTYPE_MAJOR" = "msys" ]
 	then
             git clone git://gitorious.org/~mingwandroid/qt/mingw-android-official-qt.git qt-src || error_msg "Can't clone mingw qt"
             pushd qt-src
@@ -297,8 +297,7 @@ function prepareHostQt
         pushd static-build$HOST_QT_CONFIG
     fi
     STATIC_QT_PATH=$PWD
-#     if [ ! -f all_done ]
-    if [ "1" = "0" ]
+    if [ ! -f all_done ]
     then
         pushd $QT_SRCDIR
         git checkout $HOST_QT_BRANCH
@@ -359,7 +358,7 @@ function prepareSdkInstallerTools
     git pull
     if [ ! -f all_done ]
     then
-        $STATIC_QT_PATH/bin/qmake CONFIG+=static $HOST_QT_CFG $HOST_QM_CFG_OPTIONS -r || error_msg "Can't configure necessitas-installer-framework"
+        $STATIC_QT_PATH/bin/qmake CONFIG+=static CONFIG+=debug $HOST_QT_CFG $HOST_QM_CFG_OPTIONS -r || error_msg "Can't configure necessitas-installer-framework"
         doMake "Can't compile necessitas-installer-framework" "all done" ma-make
     fi
     popd
@@ -725,6 +724,8 @@ function prepareGDB
             export PATH=.:$PATH
             CC32="gcc -m32"
             CXX32="g++ -m32"
+            # dylib relative pathing is a pain
+            # PYCCFG="--enable-shared"
         fi
     fi
 
@@ -813,6 +814,9 @@ function prepareGDB
     mkdir -p $target_dir/python/lib
     cp LICENSE $target_dir/PYTHON-LICENSE
     cp libpython$pyversion$SHLIB_EXT $target_dir/
+    if [ -f libpython$pyversion.a ] ; then
+        cp libpython$pyversion.a $target_dir/python/lib/
+    fi
     popd
     export PATH=$OLDPATH
     cp -a $install_dir/lib/python$pyversion $target_dir/python/lib/
@@ -850,12 +854,15 @@ function prepareGDB
         mkdir -p gdb-src/build-$GDB_PKG_NAME
         pushd gdb-src/build-$GDB_PKG_NAME
         OLDPATH=$PATH
+        if [ "$OSTYPE_MAJOR" = "msys" ] ; then
+            LDFLAGS_GDB="LDFLAGS=\"-Wl,--large-address-aware\""
+        fi
         export PATH=$install_dir/bin/:$PATH
         if [ -z $GDB_TARG_HOST_TAG ] ; then
-#         CC=$CC32 CXX=$CXX32 CFLAGS="-O0 -g" LDFLAGS="-Wl,--large-address-aware" $GDB_ROOT_PATH/configure --enable-initfini-array --enable-gdbserver=no --enable-tui=yes --with-sysroot=$TEMP_PATH/android-ndk-${ANDROID_NDK_VERSION}/platforms/android-9/arch-arm --with-python=$install_dir --with-expat=yes --with-libexpat-prefix=$install_dir --prefix=$target_dir --target=arm-elf-linux --host=$HOST --build=$HOST --disable-nls
-            CC=$CC32 CXX=$CXX32 CFLAGS="-O2" LDFLAGS="-Wl,--large-address-aware" $GDB_ROOT_PATH/configure --enable-initfini-array --enable-gdbserver=no --enable-tui=yes --with-sysroot=$TEMP_PATH/android-ndk-${ANDROID_NDK_VERSION}/platforms/android-9/arch-arm --with-python=$install_dir --with-expat=yes --with-libexpat-prefix=$install_dir --prefix=$target_dir --target=arm-elf-linux --host=$HOST --build=$HOST --disable-nls
+#         CC=$CC32 CXX=$CXX32 CFLAGS="-O0 -g" $LDFLAGS_GDB $GDB_ROOT_PATH/configure --enable-initfini-array --enable-gdbserver=no --enable-tui=yes --with-sysroot=$TEMP_PATH/android-ndk-${ANDROID_NDK_VERSION}/platforms/android-9/arch-arm --with-python=$install_dir --with-expat=yes --with-libexpat-prefix=$install_dir --prefix=$target_dir --target=arm-elf-linux --host=$HOST --build=$HOST --disable-nls
+            CC=$CC32 CXX=$CXX32 CFLAGS="-O2" $LDFLAGS_GDB $GDB_ROOT_PATH/configure --enable-initfini-array --enable-gdbserver=no --enable-tui=yes --with-sysroot=$TEMP_PATH/android-ndk-${ANDROID_NDK_VERSION}/platforms/android-9/arch-arm --with-python=$install_dir --with-expat=yes --with-libexpat-prefix=$install_dir --prefix=$target_dir --target=arm-elf-linux --host=$HOST --build=$HOST --disable-nls
         else
-            CC=$CC32 CXX=$CXX32 CFLAGS="-O2" LDFLAGS="-Wl,--large-address-aware" $GDB_ROOT_PATH/configure --enable-initfini-array --enable-gdbserver=no --enable-tui=yes --with-python=$install_dir --with-expat=yes --with-libexpat-prefix=$install_dir --prefix=$target_dir --target=$HOST --host=$HOST --build=$HOST --disable-nls
+            CC=$CC32 CXX=$CXX32 CFLAGS="-O2" $LDFLAGS_GDB $GDB_ROOT_PATH/configure --enable-initfini-array --enable-gdbserver=no --enable-tui=yes --with-python=$install_dir --with-expat=yes --with-libexpat-prefix=$install_dir --prefix=$target_dir --target=$HOST --host=$HOST --build=$HOST --disable-nls
         fi
         doMake "Can't compile android gdb $GDB_VER" "all done"
         cp -a gdb/gdb$EXE_EXT $target_dir/
@@ -1801,7 +1808,7 @@ prepareSDKs
 # prepareOpenJDK
 prepareAnt
 prepareNecessitasQtCreator
-# prepareGDBVersion head $HOST_TAG
+prepareGDBVersion head $HOST_TAG
 # prepareGDBVersion 7.3
 # prepareGDBVersion head
 mkdir $CHECKOUT_BRANCH
@@ -1810,17 +1817,17 @@ prepareNecessitasQt
 # TODO :: Fix webkit build in Windows (-no-video fails) and Mac OS X (debug-and-release config incorrectly used and fails)
 # git clone often fails for webkit
 # Webkit is broken currently.
-prepareNecessitasQtWebkit
+# prepareNecessitasQtWebkit
 
-if [ "$OSTYPE_MAJOR" != "msys" ] ; then
-    prepareNecessitasQtMobility # if [[ `gcc --version` =~ .*llvm.* ]]; => syntax error near `=~'
-fi
+# if [ "$OSTYPE_MAJOR" != "msys" ] ; then
+#     prepareNecessitasQtMobility # if [[ `gcc --version` =~ .*llvm.* ]]; => syntax error near `=~'
+# fi
 
 popd
 
 #prepareWindowsPackages
-setPackagesVariables
-prepareSDKBinary
+#setPackagesVariables
+#prepareSDKBinary
 
 # Comment this block in if you want necessitas-sdk-installer-d and qtcreator-d to be built.
 if [ "$MAKE_DEBUG_HOST_APPS" = "1" ] ; then
