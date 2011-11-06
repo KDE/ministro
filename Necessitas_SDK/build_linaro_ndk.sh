@@ -348,7 +348,8 @@ function compressFinalNDK
     popd
 }
 
-function unpackGoogleNDK
+# STLPort only builds on Linux, so that must be built and uploaded before building on other platforms.
+function unpackGoogleOrLinuxNDK
 {
     if [ "$OSTYPE_MAJOR" = "msys" ] ; then
         mkdir -p /usr/ndki
@@ -359,21 +360,31 @@ function unpackGoogleNDK
     pushd /usr/ndki
     rm -rf android-ndk-${NDK_VER}
 
-    if [ ! -d android-ndk-${NDK_VER} ] ; then
-	if [ "$OSTYPE_MAJOR" = "msys" ] ; then
-            downloadIfNotExists android-ndk-${NDK_VER}-windows.zip http://dl.google.com/android/ndk/android-ndk-${NDK_VER}-windows.zip
-	    unzip android-ndk-${NDK_VER}-windows.zip
-        else
-            if [ "$OSTYPE_MAJOR" = "linux-gnu" ] ; then
-                downloadIfNotExists android-ndk-${NDK_VER}-linux-x86.tar.bz2 http://dl.google.com/android/ndk/android-ndk-${NDK_VER}-linux-x86.tar.bz2
-                tar xjvf android-ndk-${NDK_VER}-linux-x86.tar.bz2
+    if [ "$OSTYPE_MAJOR" = "linux-gnu" ] ; then
+        if [ ! -d android-ndk-${NDK_VER} ] ; then
+            if [ "$OSTYPE_MAJOR" = "msys" ] ; then
+                downloadIfNotExists android-ndk-${NDK_VER}-windows.zip http://dl.google.com/android/ndk/android-ndk-${NDK_VER}-windows.zip
+                unzip android-ndk-${NDK_VER}-windows.zip
             else
-                downloadIfNotExists android-ndk-${NDK_VER}-darwin-x86.tar.bz2 http://dl.google.com/android/ndk/android-ndk-${NDK_VER}-darwin-x86.tar.bz2
-                tar xjvf android-ndk-${NDK_VER}-darwin-x86.tar.bz2
+                if [ "$OSTYPE_MAJOR" = "linux-gnu" ] ; then
+                    downloadIfNotExists android-ndk-${NDK_VER}-linux-x86.tar.bz2 http://dl.google.com/android/ndk/android-ndk-${NDK_VER}-linux-x86.tar.bz2
+                    tar xjvf android-ndk-${NDK_VER}-linux-x86.tar.bz2
+                else
+                    downloadIfNotExists android-ndk-${NDK_VER}-darwin-x86.tar.bz2 http://dl.google.com/android/ndk/android-ndk-${NDK_VER}-darwin-x86.tar.bz2
+                    tar xjvf android-ndk-${NDK_VER}-darwin-x86.tar.bz2
+                fi
             fi
         fi
+        mv android-ndk-${NDK_VER}/sources/cxx-stl android-ndk-${NDK_VER}/sources/cxx-stl-google
+    else
+        downloadIfNotExists android-ndk-r6b-gdb-7.3.50.20110709-linux-x86.7z http://mingw-and-ndk.googlecode.com/files/android-ndk-r6b-gdb-7.3.50.20110709-linux-x86.7z
+        7za x android-ndk-r6b-gdb-7.3.50.20110709-linux-x86.7z
+        pushd andorid-ndk-${NDK_VER}
+        rm ndk-stack
+        find . -name linux-x86 | xargs rm -rf
+        find . -name "python*" | xargs rm -rf
+        popd
     fi
-    mv android-ndk-${NDK_VER}/sources/cxx-stl android-ndk-${NDK_VER}/sources/cxx-stl-google
 
     popd
 }
@@ -413,33 +424,27 @@ function mixPythonWithNDK
     pushd /usr/ndki
     mkdir android-ndk-${NDK_VER}
     pushd android-ndk-${NDK_VER}
-    find $REPO_SRC_PATH -name "*lib*${GCC_VER}.tar.bz2" | while read i ; do tar -xjvf "$i" ; done
     tar -jxvf $REPO_SRC_PATH/arm-linux-androideabi-${GCC_VER}-${BUILD_NDK}.tar.bz2
     tar -jxvf $REPO_SRC_PATH/x86-${GCC_VER}-${BUILD_NDK}.tar.bz2
-    # The official NDK uses thumb version of libstdc++ for armeabi and
-    # an arm version for armeabi-v7a, so copy the appropriate one over.
-    # Copy new libstdc++'s to sources/cxx-stl${SRCS_SUFFIX}
-    if [ ! "$SRCS_SUFFIX" = "" ] ; then
-       mv sources/cxx-stl sources/cxx-stl${SRCS_SUFFIX}
-    fi
-    cp sources/cxx-stl-google/stlport/* sources/cxx-stl${SRCS_SUFFIX}/stlport
-    cp -rf sources/cxx-stl-google/stlport/src sources/cxx-stl${SRCS_SUFFIX}/stlport/
-    cp -rf sources/cxx-stl-google/stlport/stlport sources/cxx-stl${SRCS_SUFFIX}/stlport/
-    cp -rf sources/cxx-stl-google/stlport/test sources/cxx-stl${SRCS_SUFFIX}/stlport/
-    cp -rf sources/cxx-stl-google/system sources/cxx-stl${SRCS_SUFFIX}/
-#     [ ! -d sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi/ ] || mkdir -p sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi/
-#     [ ! -d sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi-v7a/ ] || mkdir -p sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi-v7a/
-#     [ ! -d sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/x86/ ] || mkdir -p sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/x86/
-#     cp toolchains/arm-linux-androideabi-${GCC_VER}/prebuilt/${BUILD_NDK}/arm-linux-androideabi/lib/thumb/libstdc++.* sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi/
-#     cp toolchains/arm-linux-androideabi-${GCC_VER}/prebuilt/${BUILD_NDK}/arm-linux-androideabi/lib/armv7-a/libstdc++.* sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/armeabi-v7a/
-#     cp toolchains/x86-${GCC_VER}/prebuilt/${BUILD_NDK}/i686-android-linux/lib/libstdc++.* sources/cxx-stl${SRCS_SUFFIX}/gnu-libstdc++/libs/x86/
+    if [ "$OSTYPE_MAJOR" = "linux-gnu" ] ; then
+        find $REPO_SRC_PATH -name "gnu-lib*${GCC_VER}.tar.bz2" | while read i ; do tar -xjvf "$i" ; done
+        find $REPO_SRC_PATH -name "stlport*${GCC_VER}.tar.bz2" | while read i ; do tar -xjvf "$i" ; done
+        if [ ! "$SRCS_SUFFIX" = "" ] ; then
+           mv sources/cxx-stl sources/cxx-stl${SRCS_SUFFIX}
+        fi
+        cp sources/cxx-stl-google/stlport/* sources/cxx-stl${SRCS_SUFFIX}/stlport
+        cp -rf sources/cxx-stl-google/stlport/src sources/cxx-stl${SRCS_SUFFIX}/stlport/
+        cp -rf sources/cxx-stl-google/stlport/stlport sources/cxx-stl${SRCS_SUFFIX}/stlport/
+        cp -rf sources/cxx-stl-google/stlport/test sources/cxx-stl${SRCS_SUFFIX}/stlport/
+        cp -rf sources/cxx-stl-google/system sources/cxx-stl${SRCS_SUFFIX}/
 
-    tar -jxvf $REPO_SRC_PATH/arm-linux-androideabi-${GCC_VER}-gdbserver.tar.bz2
-    if [ -f $REPO_SRC_PATH/x86-${GCC_VER}-gdbserver.tar.bz2 ] ; then
-        tar -jxvf $REPO_SRC_PATH/x86-${GCC_VER}-gdbserver.tar.bz2
-    fi
-    if [ ! "$SRCS_SUFFIX" = "" ] ; then
-        cp toolchains/x86-4.4.3/prebuilt/gdbserver toolchains/x86${SRCS_SUFFIX}/prebuilt/gdbserver
+        tar -jxvf $REPO_SRC_PATH/arm-linux-androideabi-${GCC_VER}-gdbserver.tar.bz2
+        if [ -f $REPO_SRC_PATH/x86-${GCC_VER}-gdbserver.tar.bz2 ] ; then
+            tar -jxvf $REPO_SRC_PATH/x86-${GCC_VER}-gdbserver.tar.bz2
+        fi
+        if [ ! "$SRCS_SUFFIX" = "" ] ; then
+            cp toolchains/x86-4.4.3/prebuilt/gdbserver toolchains/x86${SRCS_SUFFIX}/prebuilt/gdbserver
+        fi
     fi
 
     # Copy python.
@@ -508,7 +513,7 @@ if [ "$OSTYPE_MAJOR" = "darwin" ] ; then
 fi
 
 makeInstallPython
-unpackGoogleNDK
+unpackGoogleOrLinuxNDK
 makeNDK 4.4.3
 makeNDK 4.6.2
 # must do 4.6.2 before 4.4.3 due to how libstdc++ is unpacked.
