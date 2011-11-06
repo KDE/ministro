@@ -337,6 +337,14 @@ function makeNDK
 function compressFinalNDK
 {
     pushd /usr/ndki
+    pushd android-ndk-${NDK_VER}
+    # Copy my more robust (in the face of custom ROMs) ndk-gdb.
+    cp $NDK/ndk-gdb .
+    # Copy my cmd.exe compatible ndk-build.bat (note, there are other bits needed for this to work, so not yet)
+    cp $NDK/ndk-build.bat .
+    # Get rid of old and unused stuff.
+    rm -rf toolchains/arm-eabi-4.4.0
+    popd
     7za a -mx9 android-ndk-${NDK_VER}-gdb-${GDB_VER}-${BUILD_NDK}.7z android-ndk-${NDK_VER}
     mv android-ndk-${NDK_VER}-gdb-${GDB_VER}-${BUILD_NDK}.7z $REPO_SRC_PATH
     popd
@@ -368,13 +376,6 @@ function unpackGoogleNDK
         fi
     fi
 
-    pushd android-ndk-${NDK_VER}
-    # Copy my more robust (in the face of custom ROMs) ndk-gdb.
-    cp $NDK/ndk-gdb .
-    # Copy my cmd.exe compatible ndk-build.bat (note, there are other bits needed for this to work, so not yet)
-    cp $NDK/ndk-build.bat .
-    # Get rid of old and unused stuff.
-    rm -rf toolchains/arm-eabi-4.4.0
     popd
 }
 
@@ -502,9 +503,9 @@ if [ "$OSTYPE_MAJOR" = "darwin" ] ; then
 fi
 
 makeInstallPython
+unpackGoogleNDK
 makeNDK 4.4.3
 makeNDK 4.6.2
-unpackGoogleNDK
 mixPythonWithNDK 4.4.3
 mixPythonWithNDK 4.6.2
 compressFinalNDK
