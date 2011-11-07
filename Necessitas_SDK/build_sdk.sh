@@ -384,7 +384,7 @@ function prepareNecessitasQtCreator
         pushd $QTC_PATH
         QTC_INST_PATH=$PWD/QtCreator$HOST_QT_CONFIG
         if [ ! -f all_done ] ; then
-            git checkout n-2.3
+            git checkout n-2.3-ray
             git pull
             export UPDATEINFO_DISABLE=false
             $SHARED_QT_PATH/bin/qmake $HOST_QT_CFG $HOST_QM_CFG_OPTIONS -r || error_msg "Can't configure android-qt-creator"
@@ -440,10 +440,17 @@ function prepareNecessitasQtCreator
                 cp -a $SHARED_QT_PATH/plugins/* ${QT_LIB_DEST}../plugins
                 cp -a bin/necessitas $QTC_INST_PATH/bin/
             else
-                pushd bin
-                    $SHARED_QT_PATH/bin/macdeployqt NecessitasQtCreator.app
-                    cp -rf NecessitasQtCreator.app $QTC_INST_PATH/bin/NecessitasQtCreator.app
+                pushd macdeployqt
+                    $SHARED_QT_PATH/bin/qmake $HOST_QT_CFG $HOST_QM_CFG_OPTIONS -r || error_msg "Can't configure macdeployqt"
+                    doMake "Can't compile macdeployqt" "all done" make
                 popd
+                pushd bin
+                    rm -rf NecessitasQtCreatorBackup.app
+                    cp -rf NecessitasQtCreator.app NecessitasQtCreatorBackup.app
+                    ../macdeployqt/macdeployqt/macdeployqt NecessitasQtCreator.app
+                popd
+                mv bin/NecessitasQtCreator.app $QTC_INST_PATH/bin/NecessitasQtCreator.app
+                mv bin/NecessitasQtCreatorBackup.app bin/NecessitasQtCreator.app
             fi
         fi
         mkdir $QTC_INST_PATH/images
@@ -866,8 +873,8 @@ function prepareGDB
         fi
         doMake "Can't compile android gdb $GDB_VER" "all done"
         cp -a gdb/gdb$EXE_EXT $target_dir/
-#        cp -a gdb/gdbtui$EXE_EXT $target_dir/
-        $STRIP $target_dir/gdb$EXE_EXT # .. Just while I fix native host GDB (can't debug the installer exe) and thumb-2 issues.
+        cp -a gdb/gdbtui$EXE_EXT $target_dir/
+#        $STRIP $target_dir/gdb$EXE_EXT # .. Just while I fix native host GDB (can't debug the installer exe) and thumb-2 issues.
 #        $STRIP $target_dir/gdbtui$EXE_EXT # .. Just while I fix native host GDB (can't debug the installer exe) and thumb-2 issues.
         export PATH=$OLDPATH
         popd
@@ -1826,8 +1833,8 @@ prepareNecessitasQt
 popd
 
 #prepareWindowsPackages
-#setPackagesVariables
-#prepareSDKBinary
+setPackagesVariables
+prepareSDKBinary
 
 # Comment this block in if you want necessitas-sdk-installer-d and qtcreator-d to be built.
 if [ "$MAKE_DEBUG_HOST_APPS" = "1" ] ; then
