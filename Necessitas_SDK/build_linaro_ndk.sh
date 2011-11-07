@@ -383,6 +383,15 @@ function unpackGoogleOrLinuxNDK
         rm ndk-stack
         find . -name linux-x86 | xargs rm -rf
         find . -name "python*" | xargs rm -rf
+        find . -path "*toolchains*python*include" | xargs rm -rf
+        find . -type d -path "*toolchains*lib*python*" -name "python*" | xargs rm -rf
+        find . -type d -path "*toolchains*lib*pkg*" -name "pkg*" | xargs rm -rf
+        find . -path "*bin/2to3" | xargs rm
+        find . -path "*bin/idle" | xargs rm
+        find . -name "*bin/pydoc" | xargs rm
+        find . -name "*.py" | xargs rm
+        find . -name "*.pyo" | xargs rm
+        find . -name "*.pyc" | xargs rm
         popd
     fi
 
@@ -450,12 +459,26 @@ function mixPythonWithNDK
     # Copy python.
     if [ -d toolchains/arm-linux-androideabi-${GCC_VER}/prebuilt/${BUILD_NDK} ] ; then
         pushd toolchains/arm-linux-androideabi-${GCC_VER}/prebuilt/${BUILD_NDK}
-            7za x $REPO_SRC_PATH/python-${BUILD_PYTHON}.7z
+        if [ "$OSTYPE_MAJOR" = "darwin" ] ; then
+            mkdir bin/python
+            pushd bin/python
+        fi
+        7za x $REPO_SRC_PATH/python-${BUILD_PYTHON}.7z
+        if [ "$OSTYPE_MAJOR" = "darwin" ] ; then
+            popd
+        fi
         popd
     fi
     if [ -d toolchains/x86-${GCC_VER}/prebuilt/${BUILD_NDK} ] ; then
         pushd toolchains/x86-${GCC_VER}/prebuilt/${BUILD_NDK}
-            7za x $REPO_SRC_PATH/python-${BUILD_PYTHON}.7z
+        if [ "$OSTYPE_MAJOR" = "darwin" ] ; then
+            mkdir bin/python
+            pushd bin/python
+        fi
+        7za x $REPO_SRC_PATH/python-${BUILD_PYTHON}.7z
+        if [ "$OSTYPE_MAJOR" = "darwin" ] ; then
+            popd
+        fi
         popd
     fi
     tar -jxvf $REPO_SRC_PATH/ndk-stack*.tar.bz2
