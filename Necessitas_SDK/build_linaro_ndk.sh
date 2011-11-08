@@ -316,7 +316,7 @@ function makeNDK
 
     pushd build-${BUILD_NDK}
 
-#    $NDK/build/tools/build-platforms.sh --arch="arm" --verbose
+    $NDK/build/tools/build-platforms.sh --arch="arm" --verbose
 
     ROOTDIR=$PWD
     RELEASE=`date +%Y%m%d`
@@ -360,26 +360,12 @@ function unpackGoogleOrLinuxNDK
     pushd /usr/ndki
     rm -rf android-ndk-${NDK_VER}
 
-    if [ "$OSTYPE_MAJOR" = "linux-gnu" ] ; then
-        if [ ! -d android-ndk-${NDK_VER} ] ; then
-            if [ "$OSTYPE_MAJOR" = "msys" ] ; then
-                downloadIfNotExists android-ndk-${NDK_VER}-windows.zip http://dl.google.com/android/ndk/android-ndk-${NDK_VER}-windows.zip
-                unzip android-ndk-${NDK_VER}-windows.zip
-            else
-                if [ "$OSTYPE_MAJOR" = "linux-gnu" ] ; then
-                    downloadIfNotExists android-ndk-${NDK_VER}-linux-x86.tar.bz2 http://dl.google.com/android/ndk/android-ndk-${NDK_VER}-linux-x86.tar.bz2
-                    tar xjvf android-ndk-${NDK_VER}-linux-x86.tar.bz2
-                else
-                    downloadIfNotExists android-ndk-${NDK_VER}-darwin-x86.tar.bz2 http://dl.google.com/android/ndk/android-ndk-${NDK_VER}-darwin-x86.tar.bz2
-                    tar xjvf android-ndk-${NDK_VER}-darwin-x86.tar.bz2
-                fi
-            fi
-        fi
-        mv android-ndk-${NDK_VER}/sources/cxx-stl android-ndk-${NDK_VER}/sources/cxx-stl-google
-    else
+    # Get the Linux version first.
+    if [ ! "$OSTYPE_MAJOR" = "linux-gnu" ] ; then
         downloadIfNotExists android-ndk-r6b-gdb-7.3.50.20110709-linux-x86.7z http://mingw-and-ndk.googlecode.com/files/android-ndk-r6b-gdb-7.3.50.20110709-linux-x86.7z
         7za x android-ndk-r6b-gdb-7.3.50.20110709-linux-x86.7z
         pushd android-ndk-${NDK_VER}
+        rm -rf sources/cxx-stl-google
         rm ndk-stack
         find . -name linux-x86 | xargs rm -rf
         find . -name "python*" | xargs rm -rf
@@ -394,6 +380,23 @@ function unpackGoogleOrLinuxNDK
         find . -name "*.pyc" | xargs rm
         popd
     fi
+
+    # Overwrite with the Google version for this OS (need to do this to fix symlinks in headers and libs).
+    if [ ! -d android-ndk-${NDK_VER} ] ; then
+        if [ "$OSTYPE_MAJOR" = "msys" ] ; then
+            downloadIfNotExists android-ndk-${NDK_VER}-windows.zip http://dl.google.com/android/ndk/android-ndk-${NDK_VER}-windows.zip
+            unzip android-ndk-${NDK_VER}-windows.zip
+        else
+            if [ "$OSTYPE_MAJOR" = "linux-gnu" ] ; then
+                downloadIfNotExists android-ndk-${NDK_VER}-linux-x86.tar.bz2 http://dl.google.com/android/ndk/android-ndk-${NDK_VER}-linux-x86.tar.bz2
+                tar xjvf android-ndk-${NDK_VER}-linux-x86.tar.bz2
+            else
+                downloadIfNotExists android-ndk-${NDK_VER}-darwin-x86.tar.bz2 http://dl.google.com/android/ndk/android-ndk-${NDK_VER}-darwin-x86.tar.bz2
+                tar xjvf android-ndk-${NDK_VER}-darwin-x86.tar.bz2
+            fi
+        fi
+    fi
+    mv android-ndk-${NDK_VER}/sources/cxx-stl android-ndk-${NDK_VER}/sources/cxx-stl-google
 
     popd
 }
@@ -538,8 +541,8 @@ fi
 
 makeInstallPython
 unpackGoogleOrLinuxNDK
-# makeNDK 4.4.3
-# makeNDK 4.6.2
+makeNDK 4.4.3
+makeNDK 4.6.2
 # must do 4.6.2 before 4.4.3 due to how libstdc++ is unpacked.
 mixPythonWithNDK 4.6.2
 mixPythonWithNDK 4.4.3
