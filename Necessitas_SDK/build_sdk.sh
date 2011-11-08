@@ -347,13 +347,15 @@ function prepareHostQt
 function prepareSdkInstallerTools
 {
     # get installer source code
-    SDK_TOOLS_PATH=$PWD/necessitas-installer-framework/installerbuilder/bin
-    if [ ! -d necessitas-installer-framework ]
+    if [ "$HOST_QT_CONFIG" = "" ] ; then
+       SDK_TOOLS_PATH=$PWD/necessitas-installer-framework/installerbuilder/bin
+    fi
+    if [ ! -d necessitas-installer-framework$HOST_QT_CONFIG ]
     then
-        git clone git://gitorious.org/~taipan/qt-labs/necessitas-installer-framework.git necessitas-installer-framework || error_msg "Can't clone necessitas-installer-framework"
+        git clone git://gitorious.org/~taipan/qt-labs/necessitas-installer-framework.git necessitas-installer-framework$HOST_QT_CONFIG || error_msg "Can't clone necessitas-installer-framework"
     fi
 
-    pushd necessitas-installer-framework/installerbuilder
+    pushd necessitas-installer-framework$HOST_QT_CONFIG/installerbuilder
     git checkout $CHECKOUT_BRANCH
     git pull
     if [ ! -f all_done ]
@@ -373,6 +375,7 @@ function prepareSdkInstallerTools
 function prepareNecessitasQtCreator
 {
     QTC_PATH=android-qt-creator$HOST_QT_CONFIG
+    MACDEPLOYQT=$PWD/$QTC_PATH/macdeployqt/macdeployqt/macdeployqt
 
     if [ ! -d $QTC_PATH ]
     then
@@ -447,7 +450,7 @@ function prepareNecessitasQtCreator
                 pushd bin
                     rm -rf NecessitasQtCreatorBackup.app
                     cp -rf NecessitasQtCreator.app NecessitasQtCreatorBackup.app
-                    ../macdeployqt/macdeployqt/macdeployqt NecessitasQtCreator.app
+                    $MACDEPLOYQT NecessitasQtCreator.app
                 popd
                 mv bin/NecessitasQtCreator.app $QTC_INST_PATH/bin/NecessitasQtCreator.app
                 mv bin/NecessitasQtCreatorBackup.app bin/NecessitasQtCreator.app
@@ -1650,13 +1653,13 @@ function prepareSDKBinary
         popd
         cp -rf $QT_SRCDIR/src/gui/mac/qt_menu.nib $REPO_SRC_PATH/necessitas-sdk-installer$HOST_QT_CONFIG.app/Contents/Resources/
     fi
-    mkdir sdkmaintenance
-    pushd sdkmaintenance
+    mkdir sdkmaintenance${HOST_QT_CONFIG}
+    pushd sdkmaintenance${HOST_QT_CONFIG}
     rm -fr *.7z
     if [ "$OSTYPE_MAJOR" = "msys" ] ; then
         mkdir temp
         cp -a $REPO_SRC_PATH/necessitas-sdk-installer${HOST_QT_CONFIG}${EXE_EXT} temp/SDKMaintenanceToolBase.exe
-        createArchive temp sdkmaintenance-windows.7z
+        createArchive temp sdkmaintenance${HOST_QT_CONFIG}-windows.7z
     else
         if [ "$OSTYPE_MAJOR" = "darwin" ] ; then
             cp -a $REPO_SRC_PATH/necessitas-sdk-installer${HOST_QT_CONFIG}.app .tempSDKMaintenanceTool
@@ -1664,9 +1667,9 @@ function prepareSDKBinary
             cp -a $REPO_SRC_PATH/necessitas-sdk-installer${HOST_QT_CONFIG} .tempSDKMaintenanceTool
         fi
         if [ "$OSTYPE_MAJOR" = "linux-gnu" ] ; then
-                createArchive . sdkmaintenance-linux-x86.7z
+                createArchive . sdkmaintenance${HOST_QT_CONFIG}-linux-x86.7z
         else
-                createArchive . sdkmaintenance-darwin-x86.7z
+                createArchive . sdkmaintenance${HOST_QT_CONFIG}-darwin-x86.7z
         fi
     fi
     mkdir -p $REPO_PATH_PACKAGES/org.kde.necessitas.tools.sdkmaintenance/data/
