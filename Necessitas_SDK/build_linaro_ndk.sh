@@ -134,6 +134,27 @@ function makeNDKForArch
     cp /usr/ndkb/*.bz2 $REPO_SRC_PATH/
 }
 
+function cloneNDK
+{
+    mkdir build-${BUILD_NDK}
+    pushd build-${BUILD_NDK}
+    if [ ! -d "development" ]
+    then
+        env GIT_SSL_NO_VERIFY=true git clone https://github.com/android/platform_development.git development || error_msg "Can't clone development"
+#        git clone git://android.git.kernel.org/platform/development.git development || error_msg "Can't clone development"
+    fi
+    if [ ! -d "ndk" ]
+    then
+        git clone git://gitorious.org/mingw-android-ndk/mingw-android-ndk.git ndk || error_msg "Can't clone ndk"
+    fi
+    pushd ndk
+        git checkout -b integration origin/integration
+    popd
+    export NDK=$PWD/ndk
+    export ANDROID_NDK_ROOT=$NDK
+    popd
+}
+
 function makeNDK
 {
     PYTHONVER=`pwd`/Python-2.7.1/python-build/install-python-${BUILD_PYTHON}
@@ -147,24 +168,6 @@ function makeNDK
     else
         GCC_LINARO=1
     fi
-
-    mkdir build-${BUILD_NDK}
-    pushd build-${BUILD_NDK}
-        if [ ! -d "development" ]
-        then
-         env GIT_SSL_NO_VERIFY=true git clone https://github.com/android/platform_development.git development || error_msg "Can't clone development"
-#        git clone git://android.git.kernel.org/platform/development.git development || error_msg "Can't clone development"
-        fi
-        if [ ! -d "ndk" ]
-        then
-        git clone git://gitorious.org/mingw-android-ndk/mingw-android-ndk.git ndk || error_msg "Can't clone ndk"
-    fi
-    pushd ndk
-        git checkout -b integration origin/integration
-    popd
-    export NDK=$PWD/ndk
-    export ANDROID_NDK_ROOT=$NDK
-    popd
 
     mkdir src
     pushd src
@@ -374,7 +377,7 @@ function unpackGoogleOrLinuxNDK
         find . -type d -path "*toolchains*lib*pkg*" -name "pkg*" | xargs rm -rf
         find . -path "*bin/2to3" | xargs rm
         find . -path "*bin/idle" | xargs rm
-        find . -name "*bin/pydoc" | xargs rm
+        find . -path "*bin/pydoc" | xargs rm
         find . -name "*.py" | xargs rm
         find . -name "*.pyo" | xargs rm
         find . -name "*.pyc" | xargs rm
@@ -382,21 +385,33 @@ function unpackGoogleOrLinuxNDK
     fi
 
     # Overwrite with the Google version for this OS (need to do this to fix symlinks in headers and libs).
-    if [ ! -d android-ndk-${NDK_VER} ] ; then
-        if [ "$OSTYPE_MAJOR" = "msys" ] ; then
-            downloadIfNotExists android-ndk-${NDK_VER}-windows.zip http://dl.google.com/android/ndk/android-ndk-${NDK_VER}-windows.zip
-            unzip android-ndk-${NDK_VER}-windows.zip
+    if [ "$OSTYPE_MAJOR" = "msys" ] ; then
+        downloadIfNotExists android-ndk-${NDK_VER}-windows.zip http://dl.google.com/android/ndk/android-ndk-${NDK_VER}-windows.zip
+        unzip -o android-ndk-${NDK_VER}-windows.zip
+        # Copy across my fixes so that the ndk can run from cmd.exe (you must supply tools, e.g. awk yourself though)
+        cp -f $NDK/build/core/build-binary.mk android-ndk-${NDK_VER}/build/core/
+        cp -f $NDK/build/core/build-local.mk android-ndk-${NDK_VER}/build/core/
+        cp -f $NDK/build/core/definitions.mk android-ndk-${NDK_VER}/build/core/
+        cp -f $NDK/build/core/init.mk android-ndk-${NDK_VER}/build/core/
+        cp -f $NDK/build/core/main.mk android-ndk-${NDK_VER}/build/core/
+        cp -f $NDK/build/core/ndk-common.sh android-ndk-${NDK_VER}/build/core/
+        cp -f $NDK/build/core/setup-app.mk android-ndk-${NDK_VER}/build/core/
+        cp -f $NDK/build/core/setup-imports.mk android-ndk-${NDK_VER}/build/core/
+        cp -f $NDK/build/core/setup-toolchain.mk android-ndk-${NDK_VER}/build/core/
+    else
+        if [ "$OSTYPE_MAJOR" = "linux-gnu" ] ; then
+            downloadIfNotExists android-ndk-${NDK_VER}-linux-x86.tar.bz2 http://dl.google.com/android/ndk/android-ndk-${NDK_VER}-linux-x86.tar.bz2
+            tar xjvf android-ndk-${NDK_VER}-linux-x86.tar.bz2
         else
-            if [ "$OSTYPE_MAJOR" = "linux-gnu" ] ; then
-                downloadIfNotExists android-ndk-${NDK_VER}-linux-x86.tar.bz2 http://dl.google.com/android/ndk/android-ndk-${NDK_VER}-linux-x86.tar.bz2
-                tar xjvf android-ndk-${NDK_VER}-linux-x86.tar.bz2
-            else
-                downloadIfNotExists android-ndk-${NDK_VER}-darwin-x86.tar.bz2 http://dl.google.com/android/ndk/android-ndk-${NDK_VER}-darwin-x86.tar.bz2
-                tar xjvf android-ndk-${NDK_VER}-darwin-x86.tar.bz2
-            fi
+            downloadIfNotExists android-ndk-${NDK_VER}-darwin-x86.tar.bz2 http://dl.google.com/android/ndk/android-ndk-${NDK_VER}-darwin-x86.tar.bz2
+            tar xjvf android-ndk-${NDK_VER}-darwin-x86.tar.bz2
         fi
     fi
+    # Copy across modified ndk build sripts (i.e. scripts to rebuild ndk with).
+    cp -f $NDK/build/tools/*.sh android-ndk-${NDK_VER}/build/tools/
     mv android-ndk-${NDK_VER}/sources/cxx-stl android-ndk-${NDK_VER}/sources/cxx-stl-google
+    cp -f $NDK/ndk-build android-ndk-${NDK_VER}/
+    cp -f $NDK/README.TXT android-ndk-${NDK_VER}/
 
     popd
 }
@@ -539,6 +554,7 @@ if [ "$OSTYPE_MAJOR" = "darwin" ] ; then
     fi
 fi
 
+cloneNDK
 makeInstallPython
 unpackGoogleOrLinuxNDK
 makeNDK 4.4.3
