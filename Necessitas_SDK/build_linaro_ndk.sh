@@ -368,7 +368,6 @@ function unpackGoogleOrLinuxNDK
         downloadIfNotExists android-ndk-r6b-gdb-7.3.50.20110709-linux-x86.7z http://mingw-and-ndk.googlecode.com/files/android-ndk-r6b-gdb-7.3.50.20110709-linux-x86.7z
         7za x android-ndk-r6b-gdb-7.3.50.20110709-linux-x86.7z
         pushd android-ndk-${NDK_VER}
-        rm -rf sources/cxx-stl-google
         rm ndk-stack
         find . -name linux-x86 | xargs rm -rf
         find . -name "python*" | xargs rm -rf
@@ -409,7 +408,9 @@ function unpackGoogleOrLinuxNDK
     fi
     # Copy across modified ndk build sripts (i.e. scripts to rebuild ndk with).
     cp -f $NDK/build/tools/*.sh android-ndk-${NDK_VER}/build/tools/
-    mv android-ndk-${NDK_VER}/sources/cxx-stl android-ndk-${NDK_VER}/sources/cxx-stl-google
+    if [ "$OSTYPE_MAJOR" = "linux-gnu" ] ; then
+        mv android-ndk-${NDK_VER}/sources/cxx-stl android-ndk-${NDK_VER}/sources/cxx-stl-google
+    fi
     cp -f $NDK/ndk-build android-ndk-${NDK_VER}/
     cp -f $NDK/README.TXT android-ndk-${NDK_VER}/
 
@@ -423,11 +424,7 @@ function mixPythonWithNDK
     if [ ! "$1" = "" ] ; then
        GCC_VER=$1
     fi
-    if [ ! "$GCC_VER" = "4.4.3" ] ; then
-        SRCS_SUFFIX=-$GCC_VER
-    else
-        SRCS_SUFFIX=
-    fi
+    SRCS_SUFFIX=-$GCC_VER
 
     if [ ! -f $REPO_SRC_PATH/python-${BUILD_PYTHON}.7z ]; then
        echo "Failed to find python, $REPO_SRC_PATH/python-${BUILD_PYTHON}.7z"
@@ -455,21 +452,19 @@ function mixPythonWithNDK
     tar -jxvf $REPO_SRC_PATH/x86-${GCC_VER}-${BUILD_NDK}.tar.bz2
     if [ "$OSTYPE_MAJOR" = "linux-gnu" ] ; then
         find $REPO_SRC_PATH -name "gnu-lib*${GCC_VER}.tar.bz2" | while read i ; do tar -xjvf "$i" ; done
-        find $REPO_SRC_PATH -name "stlport*${GCC_VER}.tar.bz2" | while read i ; do tar -xjvf "$i" ; done
-        if [ ! "$SRCS_SUFFIX" = "" ] ; then
-           mv sources/cxx-stl sources/cxx-stl${SRCS_SUFFIX}
-        fi
         cp sources/cxx-stl-google/stlport/* sources/cxx-stl${SRCS_SUFFIX}/stlport
         cp -rf sources/cxx-stl-google/stlport/src sources/cxx-stl${SRCS_SUFFIX}/stlport/
         cp -rf sources/cxx-stl-google/stlport/stlport sources/cxx-stl${SRCS_SUFFIX}/stlport/
         cp -rf sources/cxx-stl-google/stlport/test sources/cxx-stl${SRCS_SUFFIX}/stlport/
         cp -rf sources/cxx-stl-google/system sources/cxx-stl${SRCS_SUFFIX}/
+        find $REPO_SRC_PATH -name "stlport*${GCC_VER}.tar.bz2" | while read i ; do tar -xjvf "$i" ; done
 
         tar -jxvf $REPO_SRC_PATH/arm-linux-androideabi-${GCC_VER}-gdbserver.tar.bz2
         if [ -f $REPO_SRC_PATH/x86-${GCC_VER}-gdbserver.tar.bz2 ] ; then
             tar -jxvf $REPO_SRC_PATH/x86-${GCC_VER}-gdbserver.tar.bz2
         fi
-        if [ ! "$SRCS_SUFFIX" = "" ] ; then
+        # Until x86 gdbserver builds.
+        if [ ! "$SRCS_SUFFIX" = "4.4.3" ] ; then
             cp toolchains/x86-4.4.3/prebuilt/gdbserver toolchains/x86${SRCS_SUFFIX}/prebuilt/gdbserver
         fi
     fi
@@ -557,11 +552,11 @@ fi
 cloneNDK
 makeInstallPython
 unpackGoogleOrLinuxNDK
-makeNDK 4.4.3
-makeNDK 4.6.2
-# must do 4.6.2 before 4.4.3 due to how libstdc++ is unpacked.
-mixPythonWithNDK 4.6.2
+# makeNDK 4.4.3
+# makeNDK 4.6.2
 mixPythonWithNDK 4.4.3
+mixPythonWithNDK 4.6.2
+ln -s /usr/ndki/android-ndk-${NDK_VER}/sources/cxx-stl-4.4.3 /usr/ndki/android-ndk-${NDK_VER}/sources/cxx-stl
 compressFinalNDK
 
 popd
