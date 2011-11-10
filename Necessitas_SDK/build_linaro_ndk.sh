@@ -452,6 +452,7 @@ function mixPythonWithNDK
     tar -jxvf $REPO_SRC_PATH/x86-${GCC_VER}-${BUILD_NDK}.tar.bz2
     if [ "$OSTYPE_MAJOR" = "linux-gnu" ] ; then
         find $REPO_SRC_PATH -name "gnu-lib*${GCC_VER}.tar.bz2" | while read i ; do tar -xjvf "$i" ; done
+        mkdir sources/cxx-stl${SRCS_SUFFIX}/stlport
         cp sources/cxx-stl-google/stlport/* sources/cxx-stl${SRCS_SUFFIX}/stlport
         cp -rf sources/cxx-stl-google/stlport/src sources/cxx-stl${SRCS_SUFFIX}/stlport/
         cp -rf sources/cxx-stl-google/stlport/stlport sources/cxx-stl${SRCS_SUFFIX}/stlport/
@@ -463,7 +464,7 @@ function mixPythonWithNDK
         if [ -f $REPO_SRC_PATH/x86-${GCC_VER}-gdbserver.tar.bz2 ] ; then
             tar -jxvf $REPO_SRC_PATH/x86-${GCC_VER}-gdbserver.tar.bz2
         fi
-        # Until x86 gdbserver builds.
+        # Until x86 gdbserver builds...
         if [ ! "$SRCS_SUFFIX" = "4.4.3" ] ; then
             cp toolchains/x86-4.4.3/prebuilt/gdbserver toolchains/x86${SRCS_SUFFIX}/prebuilt/gdbserver
         fi
@@ -552,11 +553,16 @@ fi
 cloneNDK
 makeInstallPython
 unpackGoogleOrLinuxNDK
-# makeNDK 4.4.3
-# makeNDK 4.6.2
+makeNDK 4.4.3
+makeNDK 4.6.2
 mixPythonWithNDK 4.4.3
 mixPythonWithNDK 4.6.2
-ln -s /usr/ndki/android-ndk-${NDK_VER}/sources/cxx-stl-4.4.3 /usr/ndki/android-ndk-${NDK_VER}/sources/cxx-stl
+if [ "$OSTYPE_MAJOR" = "msys" ] ; then
+    # On windows, tar unpacks links as text files with the target as the contents.
+    rm -f /usr/ndki/android-ndk-${NDK_VER}/sources/cxx-stl
+    cp -rf /usr/ndki/android-ndk-${NDK_VER}/sources/cxx-stl-4.4.3 /usr/ndki/android-ndk-${NDK_VER}/sources/cxx-stl
+else
+    ln  -s /usr/ndki/android-ndk-${NDK_VER}/sources/cxx-stl-4.4.3 /usr/ndki/android-ndk-${NDK_VER}/sources/cxx-stl
+fi
 compressFinalNDK
-
 popd
