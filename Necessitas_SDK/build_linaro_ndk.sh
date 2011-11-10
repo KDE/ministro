@@ -385,7 +385,9 @@ function unpackGoogleOrLinuxNDK
 
     # Overwrite with the Google version for this OS (need to do this to fix symlinks in headers and libs).
     if [ "$OSTYPE_MAJOR" = "msys" ] ; then
-        downloadIfNotExists android-ndk-${NDK_VER}-windows.zip http://dl.google.com/android/ndk/android-ndk-${NDK_VER}-windows.zip
+	# On windows, tar unpacks links as text files with the target as the contents.
+	rm -f android-ndk-${NDK_VER}/sources/cxx-stl
+	downloadIfNotExists android-ndk-${NDK_VER}-windows.zip http://dl.google.com/android/ndk/android-ndk-${NDK_VER}-windows.zip
         unzip -o android-ndk-${NDK_VER}-windows.zip
         # Copy across my fixes so that the ndk can run from cmd.exe (you must supply tools, e.g. awk yourself though)
         cp -f $NDK/build/core/build-binary.mk android-ndk-${NDK_VER}/build/core/
@@ -558,9 +560,26 @@ makeNDK 4.6.2
 mixPythonWithNDK 4.4.3
 mixPythonWithNDK 4.6.2
 if [ "$OSTYPE_MAJOR" = "msys" ] ; then
-    # On windows, tar unpacks links as text files with the target as the contents.
-    rm -f /usr/ndki/android-ndk-${NDK_VER}/sources/cxx-stl
     cp -rf /usr/ndki/android-ndk-${NDK_VER}/sources/cxx-stl-4.4.3 /usr/ndki/android-ndk-${NDK_VER}/sources/cxx-stl
+    mkdir /tmp/cmd-ndk-bits
+    pushd /tmp/cmd-ndk-bits
+    downloadIfNotExists coreutils-5.3.0-bin.zip http://prdownloads.sourceforge.net/project/gnuwin32/coreutils/5.3.0/coreutils-5.3.0-bin.zip
+    downloadIfNotExists coreutils-5.3.0-dep.zip http://prdownloads.sourceforge.net/project/gnuwin32/coreutils/5.3.0/coreutils-5.3.0-dep.zip
+    downloadIfNotExists gawk-3.1.6-1-bin.zip    http://prdownloads.sourceforge.net/project/gnuwin32/gawk/3.1.6-1/gawk-3.1.6-1-bin.zip
+    downloadIfNotExists make.exe                http://mingw-and-ndk.googlecode.com/files/make.exe
+    7za x -y -otemp/ gawk-3.1.6-1-bin.zip
+    7za x -y -otemp/coreutils coreutils-5.3.0-bin.zip
+    7za x -y -otemp/coreutils coreutils-5.3.0-dep.zip
+    mkdir /usr/ndki/android-ndk-${NDK_VER}/cmd-exe-tools
+    mv make.exe /usr/ndki/android-ndk-${NDK_VER}/cmd-exe-tools/make-ma.exe
+    mv temp/bin/*.exe /usr/ndki/android-ndk-${NDK_VER}/cmd-exe-tools/
+    mv temp/bin/*.dll /usr/ndki/android-ndk-${NDK_VER}/cmd-exe-tools/
+    mv temp/coreutils/bin/pwd.exe /usr/ndki/android-ndk-${NDK_VER}/cmd-exe-tools/
+    mv temp/coreutils/bin/rm.exe /usr/ndki/android-ndk-${NDK_VER}/cmd-exe-tools/
+    mv temp/coreutils/bin/rmdir.exe /usr/ndki/android-ndk-${NDK_VER}/cmd-exe-tools/
+    mv temp/coreutils/bin/mkdir.exe /usr/ndki/android-ndk-${NDK_VER}/cmd-exe-tools/
+    rm /usr/ndki/android-ndk-${NDK_VER}/cmd-exe-tools/sh.exe
+    popd
 else
     ln  -s /usr/ndki/android-ndk-${NDK_VER}/sources/cxx-stl-4.4.3 /usr/ndki/android-ndk-${NDK_VER}/sources/cxx-stl
 fi
