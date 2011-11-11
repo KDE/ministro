@@ -1818,7 +1818,7 @@ prepareSDKs
 # prepareOpenJDK
 prepareAnt
 prepareNecessitasQtCreator
-prepareGDBVersion head $HOST_TAG
+# prepareGDBVersion head $HOST_TAG
 # prepareGDBVersion 7.3
 # prepareGDBVersion head
 mkdir $CHECKOUT_BRANCH

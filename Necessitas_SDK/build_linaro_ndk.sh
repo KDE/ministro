@@ -555,8 +555,8 @@ fi
 cloneNDK
 makeInstallPython
 unpackGoogleOrLinuxNDK
-makeNDK 4.4.3
-makeNDK 4.6.2
+# makeNDK 4.4.3
+# makeNDK 4.6.2
 mixPythonWithNDK 4.4.3
 mixPythonWithNDK 4.6.2
 if [ "$OSTYPE_MAJOR" = "msys" ] ; then
