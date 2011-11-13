@@ -1202,18 +1202,17 @@ function compileNecessitasQt #params $1 architecture, $2 package path, $3 NDK_TA
     # NQT_INSTALL_DIR=/data/data/org.kde.necessitas.ministro/files/qt
     NQT_INSTALL_DIR=$PWD/install
 
-    if [ "$OSTYPE" = "linux-gnu" ] ; then
-        if [ ! -d android-sdk-linux/platform-tools ]
-        then
-            rm -fr android-sdk-linux
-            $EXTERNAL_7Z -y x $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.base/data/android-sdk-linux.7z
-            $EXTERNAL_7Z -y x $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.platform_tools/data/platform-tools_${ANDROID_PLATFORM_TOOLS_VERSION}-linux.7z
-            $EXTERNAL_7Z -y x $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.android_14/data/android-${ANDROID_API_14_VERSION}.7z
-            $EXTERNAL_7Z -y x $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.android_8/data/android-${ANDROID_API_8_VERSION}.7z
-            $EXTERNAL_7Z -y x $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.android_7/data/android-${ANDROID_API_7_VERSION}.7z
-            $EXTERNAL_7Z -y x $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.android_4/data/android-${ANDROID_API_4_VERSION}-linux.7z
-        fi
+    if [ ! -d android-sdk-${HOST_TAG_NDK}/platform-tools ]
+    then
+	rm -fr android-sdk-${HOST_TAG_NDK}
+	$EXTERNAL_7Z -y x $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.base/data/android-sdk-${HOST_TAG_NEC}.7z
+	$EXTERNAL_7Z -y x $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.platform_tools/data/platform-tools_${ANDROID_PLATFORM_TOOLS_VERSION}-${HOST_TAG_NEC}.7z
+	$EXTERNAL_7Z -y x $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.android_14/data/android-${ANDROID_API_14_VERSION}.7z
+	$EXTERNAL_7Z -y x $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.android_8/data/android-${ANDROID_API_8_VERSION}.7z
+	$EXTERNAL_7Z -y x $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.android_7/data/android-${ANDROID_API_7_VERSION}.7z
+	$EXTERNAL_7Z -y x $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.android_4/data/android-${ANDROID_API_4_VERSION}-${HOST_TAG_NEC}.7z
     fi
+
     export ANDROID_SDK_TOOLS_PATH=$PWD/android-sdk/tools/
     export ANDROID_SDK_PLATFORM_TOOLS_PATH=$PWD/android-sdk/platform-tools/
 
@@ -1279,7 +1278,7 @@ function prepareNecessitasQt
         git clone git://anongit.kde.org/android-qt.git qt-src|| error_msg "Can't clone ${1}"
     fi
 
-    cloneCheckoutKDEGitRepo android-qt $CHECKOUT_BRANCH
+    cloneCheckoutKDEGitRepo android-qt unstable-ray
 
     if [ ! -f $REPO_PATH_PACKAGES/org.kde.necessitas.android.qt.armeabi/data/qt-tools-${HOST_TAG}.7z ]
     then

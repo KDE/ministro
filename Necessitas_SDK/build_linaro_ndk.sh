@@ -18,8 +18,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# TODO :: the stdc++ lib archives overwrite each other (arm vs x86)
-# TODO :: re-enable x86
 # TODO :: tidy up toolchain extraction & patching (happens always even if already done)
 
 . ndk_vars.sh
@@ -171,7 +169,6 @@ function makeNDK
 
     mkdir src
     pushd src
-#   PYTHONVER=$PWD/python-install
 
     if [ ! -d $PYTHONVER ] ; then
         if [ -f $REPO_SRC_PATH/python-${BUILD_PYTHON}.7z ]; then
@@ -461,15 +458,15 @@ function mixPythonWithNDK
         cp -rf sources/cxx-stl-google/stlport/test sources/cxx-stl${SRCS_SUFFIX}/stlport/
         cp -rf sources/cxx-stl-google/system sources/cxx-stl${SRCS_SUFFIX}/
         find $REPO_SRC_PATH -name "stlport*${GCC_VER}.tar.bz2" | while read i ; do tar -xjvf "$i" ; done
+    fi
 
-        tar -jxvf $REPO_SRC_PATH/arm-linux-androideabi-${GCC_VER}-gdbserver.tar.bz2
-        if [ -f $REPO_SRC_PATH/x86-${GCC_VER}-gdbserver.tar.bz2 ] ; then
-            tar -jxvf $REPO_SRC_PATH/x86-${GCC_VER}-gdbserver.tar.bz2
-        fi
-        # Until x86 gdbserver builds...
-        if [ ! "$SRCS_SUFFIX" = "4.4.3" ] ; then
-            cp toolchains/x86-4.4.3/prebuilt/gdbserver toolchains/x86${SRCS_SUFFIX}/prebuilt/gdbserver
-        fi
+    tar -jxvf $REPO_SRC_PATH/arm-linux-androideabi-${GCC_VER}-gdbserver.tar.bz2
+    if [ -f $REPO_SRC_PATH/x86-${GCC_VER}-gdbserver.tar.bz2 ] ; then
+	tar -jxvf $REPO_SRC_PATH/x86-${GCC_VER}-gdbserver.tar.bz2
+    fi
+    # Until x86 gdbserver builds...
+    if [ ! "$SRCS_SUFFIX" = "4.4.3" ] ; then
+	cp toolchains/x86-4.4.3/prebuilt/gdbserver toolchains/x86${SRCS_SUFFIX}/prebuilt/gdbserver
     fi
 
     # Copy python.
@@ -560,7 +557,7 @@ unpackGoogleOrLinuxNDK
 mixPythonWithNDK 4.4.3
 mixPythonWithNDK 4.6.2
 if [ "$OSTYPE_MAJOR" = "msys" ] ; then
-    cp -rf /usr/ndki/android-ndk-${NDK_VER}/sources/cxx-stl-4.4.3 /usr/ndki/android-ndk-${NDK_VER}/sources/cxx-stl
+    cp -rf /usr/ndki/android-ndk-${NDK_VER}/sources/cxx-stl-4.6.2 /usr/ndki/android-ndk-${NDK_VER}/sources/cxx-stl
     mkdir /tmp/cmd-ndk-bits
     pushd /tmp/cmd-ndk-bits
     downloadIfNotExists coreutils-5.3.0-bin.zip http://prdownloads.sourceforge.net/project/gnuwin32/coreutils/5.3.0/coreutils-5.3.0-bin.zip
@@ -581,7 +578,9 @@ if [ "$OSTYPE_MAJOR" = "msys" ] ; then
     rm /usr/ndki/android-ndk-${NDK_VER}/cmd-exe-tools/sh.exe
     popd
 else
-    ln  -s /usr/ndki/android-ndk-${NDK_VER}/sources/cxx-stl-4.4.3 /usr/ndki/android-ndk-${NDK_VER}/sources/cxx-stl
+    pushd /usr/ndki/android-ndk-${NDK_VER}/sources/
+    ln -s cxx-stl-4.6.2 cxx-stl
+    popd
 fi
 compressFinalNDK
 popd
