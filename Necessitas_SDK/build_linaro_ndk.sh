@@ -124,7 +124,12 @@ function makeNDKForArch
         ARCH_ABI=$ARCH
     fi
 #     if [ ! -f /usr/ndkb/${ARCH_ABI}-${GCC_VER}-${BUILD_NDK}.tar.bz2 ]; then
+      if [ "$ARCH" = "mac" ] ; then
+        $NDK/build/tools/rebuild-all-prebuilt.sh --arch=$ARCH --patches-dir=/tmp/ndk-tc-patches --build-dir=/usr/ndkb --verbose --package-dir=/usr/ndkb --gcc-version=$GCC_VER --gdb-path=$GDB_ROOT_PATH_USED --gdb-version=$GDB_VER --mpfr-version=2.4.2 --gmp-version=4.3.2 --toolchain-src-dir=$TCSRC --gdb-with-python=$PYTHONVER
+      else
+      exit 1
         $NDK/build/tools/rebuild-all-prebuilt.sh --arch=$ARCH --patches-dir=/tmp/ndk-tc-patches --build-dir=/usr/ndkb --verbose --package-dir=/usr/ndkb --gcc-version=$GCC_VER --gdb-path=$GDB_ROOT_PATH_USED --gdb-version=$GDB_VER --mpfr-version=2.4.2 --gmp-version=4.3.2 --binutils-version=2.20.1 --toolchain-src-dir=$TCSRC --gdb-with-python=$PYTHONVER
+      fi
 #     else
 #         echo "Skipping NDK build, already done."
 # 	echo /usr/ndkb/${ARCH_ABI}-${GCC_VER}-${BUILD_NDK}.tar.bz2
@@ -326,9 +331,10 @@ function makeNDK
     echo GDB_ROOT_PATH $GDB_ROOT_PATH_USED
     PYTHONHOME=""
     unset PYTHONHOME
-    makeNDKForArch arm $ROOTDIR $REPO_SRC_PATH $GCC_VER
-    makeNDKForArch x86 $ROOTDIR $REPO_SRC_PATH $GCC_VER
-
+#     makeNDKForArch arm $ROOTDIR $REPO_SRC_PATH $GCC_VER
+#     makeNDKForArch x86 $ROOTDIR $REPO_SRC_PATH $GCC_VER
+    makeNDKForArch mac $ROOTDIR $REPO_SRC_PATH $GCC_VER
+    
     popd
 }
 
@@ -361,24 +367,24 @@ function unpackGoogleOrLinuxNDK
     rm -rf android-ndk-${NDK_VER}
 
     # Get the Linux version first.
-    if [ ! "$OSTYPE_MAJOR" = "linux-gnu" ] ; then
-        downloadIfNotExists android-ndk-r6b-gdb-7.3.50.20110709-linux-x86.7z http://mingw-and-ndk.googlecode.com/files/android-ndk-r6b-gdb-7.3.50.20110709-linux-x86.7z
-        7za x android-ndk-r6b-gdb-7.3.50.20110709-linux-x86.7z
-        pushd android-ndk-${NDK_VER}
-        rm ndk-stack
-        find . -name linux-x86 | xargs rm -rf
-        find . -name "python*" | xargs rm -rf
-        find . -path "*toolchains*python*include" | xargs rm -rf
-        find . -type d -path "*toolchains*lib*python*" -name "python*" | xargs rm -rf
-        find . -type d -path "*toolchains*lib*pkg*" -name "pkg*" | xargs rm -rf
-        find . -path "*bin/2to3" | xargs rm
-        find . -path "*bin/idle" | xargs rm
-        find . -path "*bin/pydoc" | xargs rm
-        find . -name "*.py" | xargs rm
-        find . -name "*.pyo" | xargs rm
-        find . -name "*.pyc" | xargs rm
-        popd
-    fi
+#     if [ ! "$OSTYPE_MAJOR" = "linux-gnu" ] ; then
+#         downloadIfNotExists android-ndk-r6b-gdb-7.3.50.20110709-linux-x86.7z http://mingw-and-ndk.googlecode.com/files/android-ndk-r6b-gdb-7.3.50.20110709-linux-x86.7z
+#         7za x android-ndk-r6b-gdb-7.3.50.20110709-linux-x86.7z
+#         pushd android-ndk-${NDK_VER}
+#         rm ndk-stack
+#         find . -name linux-x86 | xargs rm -rf
+#         find . -name "python*" | xargs rm -rf
+#         find . -path "*toolchains*python*include" | xargs rm -rf
+#         find . -type d -path "*toolchains*lib*python*" -name "python*" | xargs rm -rf
+#         find . -type d -path "*toolchains*lib*pkg*" -name "pkg*" | xargs rm -rf
+#         find . -path "*bin/2to3" | xargs rm
+#         find . -path "*bin/idle" | xargs rm
+#         find . -path "*bin/pydoc" | xargs rm
+#         find . -name "*.py" | xargs rm
+#         find . -name "*.pyo" | xargs rm
+#         find . -name "*.pyc" | xargs rm
+#         popd
+#     fi
 
     # Overwrite with the Google version for this OS (need to do this to fix symlinks in headers and libs).
     if [ "$OSTYPE_MAJOR" = "msys" ] ; then
@@ -449,7 +455,7 @@ function mixPythonWithNDK
     pushd android-ndk-${NDK_VER}
     tar -jxvf $REPO_SRC_PATH/arm-linux-androideabi-${GCC_VER}-${BUILD_NDK}.tar.bz2
     tar -jxvf $REPO_SRC_PATH/x86-${GCC_VER}-${BUILD_NDK}.tar.bz2
-    if [ "$OSTYPE_MAJOR" = "linux-gnu" ] ; then
+#    if [ "$OSTYPE_MAJOR" = "linux-gnu" ] ; then
         find $REPO_SRC_PATH -name "gnu-lib*${GCC_VER}.tar.bz2" | while read i ; do tar -xjvf "$i" ; done
         mkdir sources/cxx-stl${SRCS_SUFFIX}/stlport
         cp sources/cxx-stl-google/stlport/* sources/cxx-stl${SRCS_SUFFIX}/stlport
@@ -458,7 +464,7 @@ function mixPythonWithNDK
         cp -rf sources/cxx-stl-google/stlport/test sources/cxx-stl${SRCS_SUFFIX}/stlport/
         cp -rf sources/cxx-stl-google/system sources/cxx-stl${SRCS_SUFFIX}/
         find $REPO_SRC_PATH -name "stlport*${GCC_VER}.tar.bz2" | while read i ; do tar -xjvf "$i" ; done
-    fi
+#    fi
 
     tar -jxvf $REPO_SRC_PATH/arm-linux-androideabi-${GCC_VER}-gdbserver.tar.bz2
     if [ -f $REPO_SRC_PATH/x86-${GCC_VER}-gdbserver.tar.bz2 ] ; then
@@ -554,6 +560,7 @@ makeInstallPython
 unpackGoogleOrLinuxNDK
 # makeNDK 4.4.3
 # makeNDK 4.6.2
+exit 1
 mixPythonWithNDK 4.4.3
 mixPythonWithNDK 4.6.2
 if [ "$OSTYPE_MAJOR" = "msys" ] ; then
@@ -579,6 +586,7 @@ if [ "$OSTYPE_MAJOR" = "msys" ] ; then
     popd
 else
     pushd /usr/ndki/android-ndk-${NDK_VER}/sources/
+    rm -rf cxx-stl
     ln -s cxx-stl-4.6.2 cxx-stl
     popd
 fi
