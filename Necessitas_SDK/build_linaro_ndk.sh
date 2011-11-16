@@ -127,7 +127,6 @@ function makeNDKForArch
       if [ "$ARCH" = "mac" ] ; then
         $NDK/build/tools/rebuild-all-prebuilt.sh --arch=$ARCH --patches-dir=/tmp/ndk-tc-patches --build-dir=/usr/ndkb --verbose --package-dir=/usr/ndkb --gcc-version=$GCC_VER --gdb-path=$GDB_ROOT_PATH_USED --gdb-version=$GDB_VER --mpfr-version=2.4.2 --gmp-version=4.3.2 --toolchain-src-dir=$TCSRC --gdb-with-python=$PYTHONVER
       else
-      exit 1
         $NDK/build/tools/rebuild-all-prebuilt.sh --arch=$ARCH --patches-dir=/tmp/ndk-tc-patches --build-dir=/usr/ndkb --verbose --package-dir=/usr/ndkb --gcc-version=$GCC_VER --gdb-path=$GDB_ROOT_PATH_USED --gdb-version=$GDB_VER --mpfr-version=2.4.2 --gmp-version=4.3.2 --binutils-version=2.20.1 --toolchain-src-dir=$TCSRC --gdb-with-python=$PYTHONVER
       fi
 #     else
@@ -412,10 +411,12 @@ function unpackGoogleOrLinuxNDK
         fi
     fi
     # Copy across modified ndk build sripts (i.e. scripts to rebuild ndk with).
-    cp -f $NDK/build/tools/*.sh android-ndk-${NDK_VER}/build/tools/
-    if [ "$OSTYPE_MAJOR" = "linux-gnu" ] ; then
-        mv android-ndk-${NDK_VER}/sources/cxx-stl android-ndk-${NDK_VER}/sources/cxx-stl-google
-    fi
+    cp -rf android-ndk-${NDK_VER}/sources/cxx-stl android-ndk-${NDK_VER}/sources/cxx-stl-google
+    cp -rf android-ndk-${NDK_VER}/sources/cxx-stl android-ndk-${NDK_VER}/sources/cxx-stl-4.4.3
+    mv android-ndk-${NDK_VER}/sources/cxx-stl android-ndk-${NDK_VER}/sources/cxx-stl-4.6.2
+#     cp -rf cxx-stl/system cxx-stl-4.6.2
+#     cp -rf cxx-stl/system cxx-stl-4.4.3
+
     cp -f $NDK/ndk-build android-ndk-${NDK_VER}/
     cp -f $NDK/README.TXT android-ndk-${NDK_VER}/
 
@@ -585,8 +586,7 @@ if [ "$OSTYPE_MAJOR" = "msys" ] ; then
     popd
 else
     pushd /usr/ndki/android-ndk-${NDK_VER}/sources/
-    rm -rf cxx-stl
-    ln -s cxx-stl-4.6.2 cxx-stl
+    ln -s cxx-stl-4.4.3 cxx-stl
     popd
 fi
 compressFinalNDK
