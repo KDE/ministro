@@ -330,9 +330,9 @@ function makeNDK
     echo GDB_ROOT_PATH $GDB_ROOT_PATH_USED
     PYTHONHOME=""
     unset PYTHONHOME
-#     makeNDKForArch arm $ROOTDIR $REPO_SRC_PATH $GCC_VER
-#     makeNDKForArch x86 $ROOTDIR $REPO_SRC_PATH $GCC_VER
-    makeNDKForArch mac $ROOTDIR $REPO_SRC_PATH $GCC_VER
+    makeNDKForArch arm $ROOTDIR $REPO_SRC_PATH $GCC_VER
+    makeNDKForArch x86 $ROOTDIR $REPO_SRC_PATH $GCC_VER
+ #    makeNDKForArch mac $ROOTDIR $REPO_SRC_PATH $GCC_VER
     
     popd
 }
@@ -559,8 +559,8 @@ fi
 cloneNDK
 makeInstallPython
 unpackGoogleOrLinuxNDK
-# makeNDK 4.4.3
-# makeNDK 4.6.2
+makeNDK 4.4.3
+makeNDK 4.6.2
 mixPythonWithNDK 4.4.3
 mixPythonWithNDK 4.6.2
 if [ "$OSTYPE_MAJOR" = "msys" ] ; then
