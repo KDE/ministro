@@ -568,10 +568,10 @@ mixPythonWithNDK 4.6.2
 DEFAULT_GCC_VERSION=4.4.3
 if [ "$OSTYPE_MAJOR" = "msys" ] ; then
     cp -rf /usr/ndki/android-ndk-${NDK_VER}/sources/cxx-stl-${DEFAULT_GCC_VERSION} /usr/ndki/android-ndk-${NDK_VER}/sources/cxx-stl
-    cp /usr/bin/libwinpthread-1.dll /usr/ndki/android-ndk-${NDK_VER}/toolchains/arm-linux-androideabi-4.4.3/bin
-    cp /usr/bin/libwinpthread-1.dll /usr/ndki/android-ndk-${NDK_VER}/toolchains/arm-linux-androideabi-4.6.2/bin
-    cp /usr/bin/libwinpthread-1.dll /usr/ndki/android-ndk-${NDK_VER}/toolchains/x86-4.4.3/bin
-    cp /usr/bin/libwinpthread-1.dll /usr/ndki/android-ndk-${NDK_VER}/toolchains/x86-4.6.2/bin
+    cp /usr/bin/libwinpthread-1.dll /usr/ndki/android-ndk-${NDK_VER}/toolchains/arm-linux-androideabi-4.4.3/prebuilt/windows/libexec/gcc/arm-linux-androideabi/4.4.3/
+    cp /usr/bin/libwinpthread-1.dll /usr/ndki/android-ndk-${NDK_VER}/toolchains/arm-linux-androideabi-4.6.2/prebuilt/windows/libexec/gcc/arm-linux-androideabi/4.6.2/
+    cp /usr/bin/libwinpthread-1.dll /usr/ndki/android-ndk-${NDK_VER}/toolchains/x86-4.4.3/prebuilt/windows/libexec/gcc/i686-android-linux/4.4.3/
+    cp /usr/bin/libwinpthread-1.dll /usr/ndki/android-ndk-${NDK_VER}/toolchains/x86-4.6.2/prebuilt/windows/libexec/gcc/i686-android-linux/4.6.2/
     mkdir /tmp/cmd-ndk-bits
     pushd /tmp/cmd-ndk-bits
     downloadIfNotExists coreutils-5.3.0-bin.zip http://prdownloads.sourceforge.net/project/gnuwin32/coreutils/5.3.0/coreutils-5.3.0-bin.zip
@@ -601,4 +601,3 @@ cp -f /usr/ndki/android-ndk-${NDK_VER}/toolchains/arm-linux-androideabi-4.4.3/*.
 cp -f /usr/ndki/android-ndk-${NDK_VER}/toolchains/x86-4.4.3/*.mk /usr/ndki/android-ndk-${NDK_VER}/toolchains/x86-4.6.2/
 compressFinalNDK
 popd
-
