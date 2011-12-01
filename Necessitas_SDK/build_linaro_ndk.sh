@@ -597,7 +597,8 @@ else
     ln -s cxx-stl-${DEFAULT_GCC_VERSION} cxx-stl
     popd
 fi
-cp -f /usr/ndki/toolchains/arm-linux-androideabi-4.4.3/*.mk /usr/ndki/toolchains/arm-linux-androideabi-4.6.2/
-cp -f /usr/ndki/toolchains/x86-4.4.3/*.mk /usr/ndki/toolchains/x86-4.6.2/
+cp -f /usr/ndki/android-ndk-${NDK_VER}/toolchains/arm-linux-androideabi-4.4.3/*.mk /usr/ndki/android-ndk-${NDK_VER}/toolchains/arm-linux-androideabi-4.6.2/
+cp -f /usr/ndki/android-ndk-${NDK_VER}/toolchains/x86-4.4.3/*.mk /usr/ndki/android-ndk-${NDK_VER}/toolchains/x86-4.6.2/
 compressFinalNDK
 popd
+
