@@ -46,7 +46,7 @@ end function
 minGWInstaller=WshShell.CurrentDirectory & "\mingw-get-inst-20110530.exe"
 gitInstaller=WshShell.CurrentDirectory & "\Git-1.7.4-preview20110204.exe"
 wgetExe=WshShell.CurrentDirectory & "\wget.exe"
-downloadHTTP "http://kent.dl.sourceforge.net/project/mingw/Automated%20MinGW%20Installer/mingw-get-inst/mingw-get-inst-20110530/mingw-get-inst-20110530.exe", minGWInstaller
+downloadHTTP "http://kent.dl.sourceforge.net/project/mingw/Automated%20MinGW%20Installer/mingw-get-inst/mingw-get-inst-20111118/mingw-get-inst-20111118.exe", minGWInstaller
 downloadHTTP "http://msysgit.googlecode.com/files/Git-1.7.4-preview20110204.exe", gitInstaller
 downloadHTTP "http://users.ugent.be/~bpuype/cgi-bin/fetch.pl?dl=wget/wget.exe", wgetExe
 msgbox "Launching MinGW installer, Use pre-packaged repository," & vbcrlf & "install to C:\usr," & vbcrlf & "select C and C++ compilers," & vbcrlf & "MSYS Basic System and MinGW Developer Toolkit"

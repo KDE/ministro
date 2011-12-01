@@ -125,9 +125,9 @@ function makeNDKForArch
     fi
 #     if [ ! -f /usr/ndkb/${ARCH_ABI}-${GCC_VER}-${BUILD_NDK}.tar.bz2 ]; then
       if [ "$ARCH" = "mac" ] ; then
-        $NDK/build/tools/rebuild-all-prebuilt.sh --arch=$ARCH --patches-dir=/tmp/ndk-tc-patches --build-dir=/usr/ndkb --verbose --package-dir=/usr/ndkb --gcc-version=$GCC_VER --gdb-path=$GDB_ROOT_PATH_USED --gdb-version=$GDB_VER --mpfr-version=2.4.2 --gmp-version=4.3.2 --toolchain-src-dir=$TCSRC --gdb-with-python=$PYTHONVER
+        $NDK/build/tools/rebuild-all-prebuilt.sh --arch=$ARCH --patches-dir=/tmp/ndk-tc-patches --build-dir=/usr/ndkb --verbose --package-dir=/usr/ndkb --gcc-version=$GCC_VER --gdb-path=$GDB_ROOT_PATH_USED --gdb-version=$GDB_VER --mpfr-version=2.4.2 --gmp-version=5.0.2 --toolchain-src-dir=$TCSRC --gdb-with-python=$PYTHONVER
       else
-        $NDK/build/tools/rebuild-all-prebuilt.sh --arch=$ARCH --patches-dir=/tmp/ndk-tc-patches --build-dir=/usr/ndkb --verbose --package-dir=/usr/ndkb --gcc-version=$GCC_VER --gdb-path=$GDB_ROOT_PATH_USED --gdb-version=$GDB_VER --mpfr-version=2.4.2 --gmp-version=4.3.2 --binutils-version=2.20.1 --toolchain-src-dir=$TCSRC --gdb-with-python=$PYTHONVER
+        $NDK/build/tools/rebuild-all-prebuilt.sh --arch=$ARCH --patches-dir=/tmp/ndk-tc-patches --build-dir=/usr/ndkb --verbose --package-dir=/usr/ndkb --gcc-version=$GCC_VER --gdb-path=$GDB_ROOT_PATH_USED --gdb-version=$GDB_VER --mpfr-version=2.4.2 --gmp-version=5.0.2 --binutils-version=2.22 --toolchain-src-dir=$TCSRC --gdb-with-python=$PYTHONVER
       fi
 #     else
 #         echo "Skipping NDK build, already done."
@@ -292,7 +292,7 @@ function makeNDK
         git checkout $REVISION
     fi
 
-    rm -rf gcc-4.6.2
+#     rm -rf gcc-4.6.2
     if [ ! -d gcc-4.6.2 ]
     then
         if [ "$GCCREPOLINARO" = "" ] ; then
@@ -391,7 +391,7 @@ function unpackGoogleOrLinuxNDK
 	rm -f android-ndk-${NDK_VER}/sources/cxx-stl
 	downloadIfNotExists android-ndk-${NDK_VER}-windows.zip http://dl.google.com/android/ndk/android-ndk-${NDK_VER}-windows.zip
         unzip -o android-ndk-${NDK_VER}-windows.zip
-        # Copy across my fixes so that the ndk can run from cmd.exe (you must supply tools, e.g. awk yourself though)
+        # Copy across my fixes so that the ndk can run from cmd.exe (tools are added later).
         cp -f $NDK/build/core/build-binary.mk android-ndk-${NDK_VER}/build/core/
         cp -f $NDK/build/core/build-local.mk android-ndk-${NDK_VER}/build/core/
         cp -f $NDK/build/core/definitions.mk android-ndk-${NDK_VER}/build/core/
@@ -401,6 +401,8 @@ function unpackGoogleOrLinuxNDK
         cp -f $NDK/build/core/setup-app.mk android-ndk-${NDK_VER}/build/core/
         cp -f $NDK/build/core/setup-imports.mk android-ndk-${NDK_VER}/build/core/
         cp -f $NDK/build/core/setup-toolchain.mk android-ndk-${NDK_VER}/build/core/
+        cp -rf $NDK/build/tools android-ndk-${NDK_VER}/build/
+        cp -f $NDK/PYTHON-LICENSE.txt android-ndk-${NDK_VER}/
     else
         if [ "$OSTYPE_MAJOR" = "linux-gnu" ] ; then
             downloadIfNotExists android-ndk-${NDK_VER}-linux-x86.tar.bz2 http://dl.google.com/android/ndk/android-ndk-${NDK_VER}-linux-x86.tar.bz2
@@ -563,8 +565,9 @@ makeNDK 4.4.3
 makeNDK 4.6.2
 mixPythonWithNDK 4.4.3
 mixPythonWithNDK 4.6.2
+DEFAULT_GCC_VERSION=4.4.3
 if [ "$OSTYPE_MAJOR" = "msys" ] ; then
-    cp -rf /usr/ndki/android-ndk-${NDK_VER}/sources/cxx-stl-4.6.2 /usr/ndki/android-ndk-${NDK_VER}/sources/cxx-stl
+    cp -rf /usr/ndki/android-ndk-${NDK_VER}/sources/cxx-stl-${DEFAULT_GCC_VERSION} /usr/ndki/android-ndk-${NDK_VER}/sources/cxx-stl
     mkdir /tmp/cmd-ndk-bits
     pushd /tmp/cmd-ndk-bits
     downloadIfNotExists coreutils-5.3.0-bin.zip http://prdownloads.sourceforge.net/project/gnuwin32/coreutils/5.3.0/coreutils-5.3.0-bin.zip
@@ -582,12 +585,15 @@ if [ "$OSTYPE_MAJOR" = "msys" ] ; then
     mv temp/coreutils/bin/rm.exe /usr/ndki/android-ndk-${NDK_VER}/cmd-exe-tools/
     mv temp/coreutils/bin/rmdir.exe /usr/ndki/android-ndk-${NDK_VER}/cmd-exe-tools/
     mv temp/coreutils/bin/mkdir.exe /usr/ndki/android-ndk-${NDK_VER}/cmd-exe-tools/
+    mv temp/coreutils/bin/*.dll /usr/ndki/android-ndk-${NDK_VER}/cmd-exe-tools/
     rm /usr/ndki/android-ndk-${NDK_VER}/cmd-exe-tools/sh.exe
     popd
 else
     pushd /usr/ndki/android-ndk-${NDK_VER}/sources/
-    ln -s cxx-stl-4.4.3 cxx-stl
+    ln -s cxx-stl-${DEFAULT_GCC_VERSION} cxx-stl
     popd
 fi
+cp -f /usr/ndki/toolchains/arm-linux-androideabi-4.4.3/*.mk /usr/ndki/toolchains/arm-linux-androideabi-4.6.2/
+cp -f /usr/ndki/toolchains/x86-4.4.3/*.mk /usr/ndki/toolchains/x86-4.6.2/
 compressFinalNDK
 popd

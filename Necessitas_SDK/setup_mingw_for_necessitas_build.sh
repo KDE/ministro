@@ -1,7 +1,11 @@
 #!/bin/bash
 
+mkdir -p /usr/local/bin
 mkdir mingw-temp
 pushd mingw-temp
+
+wget -c http://mingw-and-ndk.googlecode.com/files/make.exe
+cp make.exe /usr/bin/mingw32-make.exef
 
 wget -c http://sourceforge.net/projects/infozip/files/UnZip%206.x%20%28latest%29/UnZip%206.0/unzip60.tar.gz/download
 tar -xvzf unzip60.tar.gz
@@ -15,13 +19,41 @@ SEVEN7LOC=$PWD
 pushd /usr/local/bin
 unzip -o $SEVEN7LOC/7za920.zip
 popd
+HOSTBUILDTARGET=mingw
+mkdir $HOSTBUILDTARGET
+pushd $HOSTBUILDTARGET
+HOSTBUILDTARGET=$HOSTBUILDTARGET
+popd
+if [ ! -d winsup ] ; then
+    wget -c http://kent.dl.sourceforge.net/project/mingw/MinGW/Base/mingw-rt/mingwrt-3.20/mingwrt-3.20-mingw32-dev.tar.gz
+    wget -c http://kent.dl.sourceforge.net/project/mingw/MinGW/Base/w32api/w32api-3.17/w32api-3.17-2-mingw32-dev.tar.lzma
+	mkdir winsup
+	pushd winsup
+	mkdir w32api
+	pushd w32api
+	7za x ../../w32api-3.17-2-mingw32-dev.tar.lzma
+	tar xvf w32api-3.17-2-mingw32-dev.tar
+	popd
+	mkdir mingw
+	pushd mingw
+	tar xzvf ../../mingwrt-3.20-mingw32-dev.tar.gz
+	# GCC
+	cp -rf lib/* .
+	popd
+	popd
+fi
+mkdir -vp /usr/include
+mkdir -vp /usr/lib
+cp -r winsup/mingw/* /usr/
+cp -r winsup/w32api/* /usr/
+popd
 
 # Get git. Awkwardly, git is packed up with a full mingw/msys env, so unzip
 # it to a temporary folder and copy across only certain bits, also, copy them
 # to /usr/local/bin so as not to pollute /usr/bin
-wget -c http://msysgit.googlecode.com/files/PortableGit-1.7.4-preview20110204.7z
+wget -c http://msysgit.googlecode.com/files/PortableGit-1.7.7.1-preview20111027.7z
 mkdir git-temp
-"C:\Program Files\7-zip\7z.exe" x -y -ogit-temp PortableGit-1.7.4-preview20110204.7z
+"C:\Program Files\7-zip\7z.exe" x -y -ogit-temp PortableGit-1.7.7.1-preview20111027.7z
 mkdir -p /usr/local/bin
 cp git-temp/bin/git* /usr/local/bin/
 cp git-temp/bin/ssh* /usr/local/bin/
@@ -29,9 +61,10 @@ cp git-temp/bin/msys-crypto* /usr/local/bin/
 cp git-temp/bin/msys-minires* /usr/local/bin/
 cp git-temp/bin/libcurl-4.dll /usr/local/bin/
 cp git-temp/bin/libcrypto.dll /usr/local/bin/
+cp git-temp/bin/msys-crypto-0.9.8.dll /usr/local/bin/
 cp git-temp/bin/libssl.dll /usr/local/bin/
 cp git-temp/bin/gpg.exe /usr/local/bin/
-cp git-temp/bin/libiconv2.dll /usr/local/bin/
+cp git-temp/bin/libiconv-2.dll /usr/local/bin/
 mkdir -p /usr/local/share
 cp -r git-temp/share/git-core /usr/local/share/
 cp -r git-temp/share/gitk /usr/local/share/
@@ -89,15 +122,15 @@ wget -c http://ftp.gnu.org/pub/gnu/gettext/gettext-0.18.1.1.tar.gz
 rm -rf gettext-0.18.1.1
 tar -xvzf gettext-0.18.1.1.tar.gz
 pushd gettext-0.18.1.1
-CFLAGS=-O2 && ./configure --enable-static --disable-shared --with-curses=$install_dir --enable-multibyte --prefix=/usr  CFLAGS=-O3
+./configure --enable-static --disable-shared --with-libiconv-prefix=/usr --enable-multibyte --prefix=/usr  CFLAGS="-O3 -DPTW32_STATIC_LIB"
 make
 make install
 popd
 
 # For mingw Python. Generate libmsi.a and copy msi.h, msidefs.h, msimcntl.h, msimcsdk.h, msiquery.h, fci.h to /usr/include.
-wget -c http://downloads.sourceforge.net/mingw-w64/Toolchains%20targetting%20Win32/Personal%20Builds/sezero_20101003/mingw-w32-bin_i686-mingw_20101003_sezero.zip
+wget -c http://heanet.dl.sourceforge.net/project/mingw-w64/Toolchains%20targetting%20Win32/Personal%20Builds/sezero_4.5_20111101/mingw-w32-bin_i686-mingw_20111101_sezero.zip
 mkdir mingw64-w32-temp
-unzip -d mingw64-w32-temp mingw-w32-bin_i686-mingw_20101003_sezero.zip
+unzip -d mingw64-w32-temp mingw-w32-bin_i686-mingw_20111101_sezero.zip
 
 cp mingw64-w32-temp/mingw32/i686-w64-mingw32/include/msi*.h /usr/include
 cp mingw64-w32-temp/mingw32/i686-w64-mingw32/include/fci.h /usr/include
