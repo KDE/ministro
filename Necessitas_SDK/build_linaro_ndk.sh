@@ -349,7 +349,7 @@ function compressFinalNDK
     rm -rf toolchains/arm-eabi-4.4.0
     popd
     7za a -mx9 android-ndk-${NDK_VER}-gdb-${GDB_VER}-binutils-2.22-${BUILD_NDK}.7z android-ndk-${NDK_VER}
-    mv android-ndk-${NDK_VER}-gdb-${GDB_VER}-${BUILD_NDK}.7z $REPO_SRC_PATH
+    mv android-ndk-${NDK_VER}-gdb-${GDB_VER}-binutils-2.22-${BUILD_NDK}.7z $REPO_SRC_PATH
     popd
 }
 
