@@ -348,7 +348,7 @@ function compressFinalNDK
     # Get rid of old and unused stuff.
     rm -rf toolchains/arm-eabi-4.4.0
     popd
-    7za a -mx9 android-ndk-${NDK_VER}-gdb-${GDB_VER}-${BUILD_NDK}.7z android-ndk-${NDK_VER}
+    7za a -mx9 android-ndk-${NDK_VER}-gdb-${GDB_VER}-binutils-2.22-${BUILD_NDK}.7z android-ndk-${NDK_VER}
     mv android-ndk-${NDK_VER}-gdb-${GDB_VER}-${BUILD_NDK}.7z $REPO_SRC_PATH
     popd
 }
@@ -568,6 +568,10 @@ mixPythonWithNDK 4.6.2
 DEFAULT_GCC_VERSION=4.4.3
 if [ "$OSTYPE_MAJOR" = "msys" ] ; then
     cp -rf /usr/ndki/android-ndk-${NDK_VER}/sources/cxx-stl-${DEFAULT_GCC_VERSION} /usr/ndki/android-ndk-${NDK_VER}/sources/cxx-stl
+    cp /usr/bin/libwinpthread-1.dll /usr/ndki/android-ndk-${NDK_VER}/toolchains/arm-linux-androideabi-4.4.3/bin
+    cp /usr/bin/libwinpthread-1.dll /usr/ndki/android-ndk-${NDK_VER}/toolchains/arm-linux-androideabi-4.6.2/bin
+    cp /usr/bin/libwinpthread-1.dll /usr/ndki/android-ndk-${NDK_VER}/toolchains/x86-4.4.3/bin
+    cp /usr/bin/libwinpthread-1.dll /usr/ndki/android-ndk-${NDK_VER}/toolchains/x86-4.6.2/bin
     mkdir /tmp/cmd-ndk-bits
     pushd /tmp/cmd-ndk-bits
     downloadIfNotExists coreutils-5.3.0-bin.zip http://prdownloads.sourceforge.net/project/gnuwin32/coreutils/5.3.0/coreutils-5.3.0-bin.zip
