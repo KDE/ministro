@@ -123,16 +123,17 @@ function makeNDKForArch
     else
         ARCH_ABI=$ARCH
     fi
-#     if [ ! -f /usr/ndkb/${ARCH_ABI}-${GCC_VER}-${BUILD_NDK}.tar.bz2 ]; then
-      if [ "$ARCH" = "mac" ] ; then
-        $NDK/build/tools/rebuild-all-prebuilt.sh --arch=$ARCH --patches-dir=/tmp/ndk-tc-patches --build-dir=/usr/ndkb --verbose --package-dir=/usr/ndkb --gcc-version=$GCC_VER --gdb-path=$GDB_ROOT_PATH_USED --gdb-version=$GDB_VER --mpfr-version=2.4.2 --gmp-version=5.0.2 --toolchain-src-dir=$TCSRC --gdb-with-python=$PYTHONVER
-      else
-        $NDK/build/tools/rebuild-all-prebuilt.sh --arch=$ARCH --patches-dir=/tmp/ndk-tc-patches --build-dir=/usr/ndkb --verbose --package-dir=/usr/ndkb --gcc-version=$GCC_VER --gdb-path=$GDB_ROOT_PATH_USED --gdb-version=$GDB_VER --mpfr-version=2.4.2 --gmp-version=5.0.2 --binutils-version=2.22 --toolchain-src-dir=$TCSRC --gdb-with-python=$PYTHONVER
-      fi
-#     else
-#         echo "Skipping NDK build, already done."
-# 	echo /usr/ndkb/${ARCH_ABI}-${GCC_VER}-${BUILD_NDK}.tar.bz2
-#     fi
+    if [ "$GCC_VER" = "4.4.3" ] ; then
+        GMPVERSION=4.3.2
+    else
+        GMPVERSION=5.0.2
+    fi
+    if [ ! -f /usr/ndkb/${ARCH_ABI}-${GCC_VER}-${BUILD_NDK}.tar.bz2 ]; then
+        $NDK/build/tools/rebuild-all-prebuilt.sh --arch=$ARCH --patches-dir=/tmp/ndk-tc-patches --build-dir=/usr/ndkb --verbose --package-dir=/usr/ndkb --gcc-version=$GCC_VER --gdb-path=$GDB_ROOT_PATH_USED --gdb-version=$GDB_VER --mpfr-version=2.4.2 --gmp-version=$GMPVERSION --binutils-version=2.22.51 --toolchain-src-dir=$TCSRC --gdb-with-python=$PYTHONVER
+    else
+        echo "Skipping NDK build, already done."
+        echo /usr/ndkb/${ARCH_ABI}-${GCC_VER}-${BUILD_NDK}.tar.bz2
+    fi
     cp /usr/ndkb/*.bz2 $REPO_SRC_PATH/
 }
 
@@ -348,8 +349,8 @@ function compressFinalNDK
     # Get rid of old and unused stuff.
     rm -rf toolchains/arm-eabi-4.4.0
     popd
-    7za a -mx9 android-ndk-${NDK_VER}-gdb-${GDB_VER}-binutils-2.22-${BUILD_NDK}.7z android-ndk-${NDK_VER}
-    mv android-ndk-${NDK_VER}-gdb-${GDB_VER}-binutils-2.22-${BUILD_NDK}.7z $REPO_SRC_PATH
+    7za a -mx9 android-ndk-${NDK_VER}-gdb-${GDB_VER}-binutils-2.22.51-${BUILD_NDK}.7z android-ndk-${NDK_VER}
+    mv android-ndk-${NDK_VER}-gdb-${GDB_VER}-binutils-2.22.51-${BUILD_NDK}.7z $REPO_SRC_PATH
     popd
 }
 
@@ -556,6 +557,11 @@ if [ "$OSTYPE_MAJOR" = "darwin" ] ; then
         chmod 755 opt/bin/7za
         cp opt/bin/7za /usr/local/bin
     fi
+fi
+
+if [ "$OSTYPE_MAJOR" = "darwin" ] ; then
+    export CC="gcc -m32"
+    export CXX="g++ -m32"
 fi
 
 cloneNDK
