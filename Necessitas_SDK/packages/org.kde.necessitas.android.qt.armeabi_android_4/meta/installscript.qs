@@ -43,6 +43,7 @@ Component.prototype.createOperations = function()
     try
     {
         component.createOperations();
+        var qtSrc = "@TargetDir@/Android/Qt/@@NECESSITAS_QT_VERSION_SHORT@@/qt-src";
         var qtPath = "@TargetDir@/Android/Qt/@@NECESSITAS_QT_VERSION_SHORT@@/armeabi-android-4";
         component.addOperation( "QtPatch2", qtPath );
 
@@ -51,6 +52,12 @@ Component.prototype.createOperations = function()
                                 qtPath,
                                 "Android",
                                 "Android_Platform_API_4_ARMv5");
+        component.addOperation( "CopyDirectory",
+                               qtSrc+"/demos",
+                               qtPath);
+        component.addOperation( "CopyDirectory",
+                               qtSrc+"/examples",
+                               qtPath);
     }
     catch( e )
     {

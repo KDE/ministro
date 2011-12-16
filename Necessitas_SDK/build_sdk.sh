@@ -276,16 +276,16 @@ function prepareHostQt
     if [ "$HOST_QT_CONFIG" = "-d" ] ; then
         if [ "$OSTYPE_MAJOR" = "msys" ] ; then
             OPTS_CFG=" -debug "
-            HOST_QT_CFG="CONFIG+=debug"
+            HOST_QT_CFG="CONFIG+=debug CONFIG+=declarative_debug"
         else
             if [ "$OSTYPE_MAJOR" = "darwin" ] ; then
                 OPTS_CFG=" -debug-and-release "
-                HOST_QT_CFG="CONFIG+=debug"
+                HOST_QT_CFG="CONFIG+=debug CONFIG+=declarative_debug"
             fi
         fi
     else
         OPTS_CFG=" -release "
-        HOST_QT_CFG="CONFIG+=release QT+=network"
+        HOST_QT_CFG="CONFIG+=release QT+=network CONFIG+=declarative_debug"
     fi
 
 
@@ -417,6 +417,7 @@ function prepareNecessitasQtCreator
             cp -rf lib/qtcreator/* $QTC_INST_PATH/bin/
             cp -a /usr/bin/libgcc_s_dw2-1.dll $QTC_INST_PATH/bin/
             cp -a /usr/bin/libstdc++-6.dll $QTC_INST_PATH/bin/
+            cp -a /usr/bin/libwinpthread-1.dll $QTC_INST_PATH/bin/
             QT_LIB_DEST=$QTC_INST_PATH/bin/
             cp -a $SHARED_QT_PATH/lib/* $QT_LIB_DEST
             cp -a bin/necessitas.bat $QTC_INST_PATH/bin/
@@ -430,7 +431,6 @@ function prepareNecessitasQtCreator
             cp -f /usr/local/bin/ma-make.exe $QTC_INST_PATH/bin/ma-make.exe
             # Odd, make.exe has only recently picked up these dll dependencies?
             cp -f /usr/local/bin/libiconv-2.dll $QTC_INST_PATH/bin/
-            cp -f /usr/bin/libpthread-2.dll $QTC_INST_PATH/bin/
         else
             if [ "$OSTYPE_MAJOR" = "linux-gnu" ]; then
                 mkdir -p $QTC_INST_PATH/Qt/lib
@@ -506,7 +506,7 @@ function makeInstallMinGWLibsAndTools
 
     mkdir texinfo
     pushd texinfo
-    downloadIfNotExists texinfo-4.13a-2-msys-1.0.13-bin.tar.lzma http://heanet.dl.sourceforge.net/project/mingw/MSYS/texinfo/texinfo-4.13a-2/texinfo-4.13a-2-msys-1.0.13-bin.tar.lzma
+    downloadIfNotExists texinfo-4.13a-2-msys-1.0.13-bin.tar.lzma http://kent.dl.sourceforge.net/project/mingw/MSYS/Base/texinfo/texinfo-4.13a-2/texinfo-4.13a-2-msys-1.0.13-bin.tar.lzma
     rm -rf texinfo-4.13a-2-msys-1.0.13-bin.tar
     7za x texinfo-4.13a-2-msys-1.0.13-bin.tar.lzma
     tar -xvf texinfo-4.13a-2-msys-1.0.13-bin.tar
@@ -543,6 +543,16 @@ function makeInstallMinGWLibsAndTools
         popd
     fi
 
+    downloadIfNotExists libiconv-1.14.tar.gz http://ftp.gnu.org/pub/gnu/libiconv/libiconv-1.14.tar.gz
+    wget -c http://ftp.gnu.org/pub/gnu/libiconv/libiconv-1.14.tar.gz
+    rm -rf libiconv-1.14
+    tar -xvzf libiconv-1.14.tar.gz
+    pushd libiconv-1.14
+    CFLAGS=-O2 && ./configure --enable-static --disable-shared --prefix=  CFLAGS=-O2
+    make && make DESTDIR=$install_dir install
+    doSed $"s/iconv_t cd,  char\* \* inbuf/iconv_t cd,  const char\* \* inbuf/g" /usr/include/iconv.h
+    popd
+
     # This make can't build gdb or python (it doesn't re-interpret MSYS mounts), but includes jobserver patch from
     # Troy Runkel: http://article.gmane.org/gmane.comp.gnu.make.windows/3223/match=
     # which fixes the longstanding make.exe -jN process hang, allowing un-attended builds of all Qt things.
@@ -565,16 +575,6 @@ function makeInstallMinGWLibs
     pushd readline-6.2
     CFLAGS=-O2 && ./configure --enable-static --disable-shared --with-curses=$install_dir --enable-multibyte --prefix=  CFLAGS=-O2
     make && make DESTDIR=$install_dir install
-    popd
-
-    downloadIfNotExists libiconv-1.14.tar.gz http://ftp.gnu.org/pub/gnu/libiconv/libiconv-1.14.tar.gz
-    wget -c http://ftp.gnu.org/pub/gnu/libiconv/libiconv-1.14.tar.gz
-    rm -rf libiconv-1.14
-    tar -xvzf libiconv-1.14.tar.gz
-    pushd libiconv-1.14
-    CFLAGS=-O2 && ./configure --enable-static --disable-shared --prefix=  CFLAGS=-O2
-    make && make DESTDIR=$install_dir install
-    doSed $"s/iconv_t cd,  char\* \* inbuf/iconv_t cd,  const char\* \* inbuf/g" /usr/include/iconv.h
     popd
 
     popd
@@ -1822,7 +1822,7 @@ prepareNecessitasQtCreator
 # prepareGDBVersion head
 mkdir $CHECKOUT_BRANCH
 pushd $CHECKOUT_BRANCH
-prepareNecessitasQt
+# prepareNecessitasQt
 # TODO :: Fix webkit build in Windows (-no-video fails) and Mac OS X (debug-and-release config incorrectly used and fails)
 # git clone often fails for webkit
 # Webkit is broken currently.
@@ -1835,8 +1835,8 @@ prepareNecessitasQt
 popd
 
 #prepareWindowsPackages
-setPackagesVariables
-prepareSDKBinary
+# setPackagesVariables
+# prepareSDKBinary
 
 # Comment this block in if you want necessitas-sdk-installer-d and qtcreator-d to be built.
 if [ "$MAKE_DEBUG_HOST_APPS" = "1" ] ; then
