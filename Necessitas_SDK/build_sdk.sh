@@ -865,14 +865,14 @@ function prepareGDB
         pushd gdb-src/build-$GDB_PKG_NAME
         OLDPATH=$PATH
         if [ "$OSTYPE_MAJOR" = "msys" ] ; then
-            LDFLAGS_GDB="LDFLAGS=\"-Wl,--large-address-aware\""
+            LDFLAGS_GDB=-Wl,--large-address-aware
         fi
         export PATH=$install_dir/bin/:$PATH
         if [ -z $GDB_TARG_HOST_TAG ] ; then
 #         CC=$CC32 CXX=$CXX32 CFLAGS="-O0 -g" $LDFLAGS_GDB $GDB_ROOT_PATH/configure --enable-initfini-array --enable-gdbserver=no --enable-tui=yes --with-sysroot=$TEMP_PATH/android-ndk-${ANDROID_NDK_VERSION}/platforms/android-9/arch-arm --with-python=$install_dir --with-expat=yes --with-libexpat-prefix=$install_dir --prefix=$target_dir --target=arm-elf-linux --host=$HOST --build=$HOST --disable-nls
-            CC=$CC32 CXX=$CXX32 CFLAGS="-O2" $LDFLAGS_GDB $GDB_ROOT_PATH/configure --enable-initfini-array --enable-gdbserver=no --enable-tui=yes --with-sysroot=$TEMP_PATH/android-ndk-${ANDROID_NDK_VERSION}/platforms/android-9/arch-arm --with-python=$install_dir --with-expat=yes --with-libexpat-prefix=$install_dir --prefix=$target_dir --target=arm-elf-linux --host=$HOST --build=$HOST --disable-nls
+            CC=$CC32 CXX=$CXX32 CFLAGS="-O2" LDFLAGS=$LDFLAGS_GDB $GDB_ROOT_PATH/configure --enable-initfini-array --enable-gdbserver=no --enable-tui=yes --with-sysroot=$TEMP_PATH/android-ndk-${ANDROID_NDK_VERSION}/platforms/android-9/arch-arm --with-python=$install_dir --with-expat=yes --with-libexpat-prefix=$install_dir --prefix=$target_dir --target=arm-elf-linux --host=$HOST --build=$HOST --disable-nls
         else
-            CC=$CC32 CXX=$CXX32 CFLAGS="-O2" $LDFLAGS_GDB $GDB_ROOT_PATH/configure --enable-initfini-array --enable-gdbserver=no --enable-tui=yes --with-python=$install_dir --with-expat=yes --with-libexpat-prefix=$install_dir --prefix=$target_dir --target=$HOST --host=$HOST --build=$HOST --disable-nls
+            CC=$CC32 CXX=$CXX32 CFLAGS="-O2" LDFLAGS=$LDFLAGS_GDB $GDB_ROOT_PATH/configure --enable-initfini-array --enable-gdbserver=no --enable-tui=yes --with-python=$install_dir --with-expat=yes --with-libexpat-prefix=$install_dir --prefix=$target_dir --target=$HOST --host=$HOST --build=$HOST --disable-nls
         fi
         doMake "Can't compile android gdb $GDB_VER" "all done"
         cp -a gdb/gdb$EXE_EXT $target_dir/
@@ -1812,12 +1812,12 @@ if [ "$OSTYPE_MAJOR" = "msys" ] ; then
 fi
 prepareHostQt
 prepareSdkInstallerTools
+prepareGDBVersion head $HOST_TAG
 prepareNDKs
 prepareSDKs
 # prepareOpenJDK
 prepareAnt
 prepareNecessitasQtCreator
-# prepareGDBVersion head $HOST_TAG
 # prepareGDBVersion 7.3
 # prepareGDBVersion head
 mkdir $CHECKOUT_BRANCH

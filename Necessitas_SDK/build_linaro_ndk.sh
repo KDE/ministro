@@ -293,21 +293,21 @@ function makeNDK
         git checkout $REVISION
     fi
 
-#     rm -rf gcc-4.6.2
-    if [ ! -d gcc-4.6.2 ]
+#    rm -rf gcc-4.6.2
+    if [ ! -d $GCC_VER ]
     then
         if [ "$GCCREPOLINARO" = "" ] ; then
-            downloadIfNotExists gcc-linaro-4.6-2011.10.tar.bz2 http://launchpad.net/gcc-linaro/4.6/4.6-2011.10/+download/gcc-linaro-4.6-2011.10.tar.bz2
-            tar xjvf gcc-linaro-4.6-2011.10.tar.bz2
-            mv gcc-linaro-4.6-2011.10 gcc-4.6.2
-            echo 4.6.2 > gcc-4.6.2/gcc/BASE-VER
+            downloadIfNotExists gcc-linaro-${GCC_VER_LINARO}.tar.bz2 http://launchpad.net/gcc-linaro/4.6/${GCC_VER_LINARO}/+download/gcc-linaro-${GCC_VER_LINARO}.tar.bz2
+            tar xjvf gcc-linaro-${GCC_VER_LINARO}.tar.bz2
+            mv gcc-linaro-${GCC_VER_LINARO} ${GCC_VER}
+            echo ${GCC_VER} > gcc-${GCC_VER}/gcc/BASE-VER
             mkdir -p /tmp/ndk-tc-patches/gcc
             cp $NDK/build/tools/toolchain-patches-linaro-4.6-android-and-win32/*.patch /tmp/ndk-tc-patches/gcc
         else
-            git clone $GCCREPOLINARO gcc-4.6.2 || error_msg "Can't clone $GCCREPO -> $GCCSRCDIR"
+            git clone $GCCREPOLINARO gcc-$GCC_VER || error_msg "Can't clone $GCCREPO -> $GCCSRCDIR"
         fi
     fi
-    pushd gcc-4.6.2
+    pushd gcc-$GCC_VER
     if [ -d .git ] ; then
         git branch -D windows || echo "Windows branch didn't exist, not a problem."
         git checkout -b windows
