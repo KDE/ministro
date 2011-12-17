@@ -690,8 +690,8 @@ function prepareGDB
 {
     package_name_ver=${GDB_VER//./_} # replace . with _
     if [ -z $GDB_TARG_HOST_TAG ] ; then
-        GDB_PKG_NAME=gdb-$GDB_VER-$HOST_TAG
-        GDB_FLDR_NAME=gdb-$GDB_VER
+        GDB_PKG_NAME=gdb-android-$GDB_VER-$HOST_TAG
+        GDB_FLDR_NAME=gdb-android-$GDB_VER
         package_path=$REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.gdb_$package_name_ver/data
     else
         GDB_PKG_NAME=gdb_$GDB_TARG_HOST_TAG-$GDB_VER
@@ -709,7 +709,7 @@ function prepareGDB
     pyversion=2.7
     pyfullversion=2.7.1
     install_dir=$PWD/install
-    target_dir=$PWD/$GDB_FLDR_NAME
+    target_dir=$PWD/gdb-src/$GDB_FLDR_NAME
     mkdir -p $target_dir
 
     OLDPATH=$PATH
@@ -718,6 +718,7 @@ function prepareGDB
         CC32="gcc -m32"
         CXX32="g++ -m32"
         PYCFGDIR=$install_dir/lib/python$pyversion/config
+        PYCCFG="--enable-unicode=ucs4"
     else
         if [ "$OSTYPE_MAJOR" = "msys" ] ; then
             SUFFIX=.exe
@@ -744,15 +745,13 @@ function prepareGDB
     OLDCFLAGS=$CFLAGS
 
     downloadIfNotExists expat-2.0.1.tar.gz http://downloads.sourceforge.net/sourceforge/expat/expat-2.0.1.tar.gz || error_msg "Can't download expat library"
-    if [ ! -d expat-2.0.1 ]
-    then
-        tar xzvf expat-2.0.1.tar.gz
-        pushd expat-2.0.1
-            CC=$CC32 CXX=$CXX32 ./configure --disable-shared --enable-static -prefix=/
-            doMake "Can't compile expat" "all done"
-            make DESTDIR=$install_dir install || error_msg "Can't install expat library"
-        popd
-    fi
+    tar xzvf expat-2.0.1.tar.gz
+    pushd expat-2.0.1
+        CC=$CC32 CXX=$CXX32 ./configure --disable-shared --enable-static -prefix=/
+        doMake "Can't compile expat" "all done"
+        make DESTDIR=$install_dir install || error_msg "Can't install expat library"
+    popd
+
     # Again, what a terrible failure.
     unset PYTHONHOME
     if [ ! -f Python-$pyfullversion/all_done ]
@@ -772,7 +771,7 @@ function prepareGDB
 
         pushd Python-$pyfullversion
         if [ "$OSTYPE_MAJOR" = "msys" ] ; then
-            # Hack for MSI.
+            # Hack for MSI.c
             cp /c/strawberry/c/i686-w64-mingw32/include/fci.h fci.h
         fi
         if [ "$USINGMAPYTHON" = "1" ] ; then
@@ -891,12 +890,14 @@ function prepareGDB
     find . -name *.py[co] | xargs rm -f
     find . -name test | xargs rm -fr
     find . -name tests | xargs rm -fr
-    popd
+    cd ..
 
     createArchive $GDB_FLDR_NAME $GDB_PKG_NAME.7z
     mkdir -p $package_path
 
     mv $GDB_PKG_NAME.7z $package_path/
+
+    popd
 
     popd #gdb-build
 }
@@ -940,10 +941,10 @@ function prepareGDBServer
 
     export CC="$TOOLCHAIN_PREFIX-gcc --sysroot=$PWD/android-sysroot"
     if [ "$MAKE_DEBUG_GDBSERVER" = "1" ] ; then
-        export CFLAGS="-O0 -g -nostdlib -D__ANDROID__ -DANDROID -DSTDC_HEADERS -I$TEMP_PATH/android-ndk-${ANDROID_NDK_VERSION}/toolchains/arm-linux-androideabi-$ANDROID_GCC_VERSION/prebuilt/linux-x86/lib/gcc/arm-linux-androideabi/$ANDROID_GCC_VERSION_MAJOR/include -I$PWD/android-sysroot/usr/include -fno-short-enums"
+        export CFLAGS="-O0 -g -nostdlib -D__ANDROID__ -DANDROID -DSTDC_HEADERS -I$TEMP_PATH/android-ndk-${ANDROID_NDK_VERSION}/toolchains/arm-linux-androideabi-$ANDROID_GCC_VERSION/prebuilt/linux-x86/lib/gcc/arm-linux-androideabi/$ANDROID_GCC_VERSION_MAJOR/include -I$PWD/android-sysroot/usr/include -fno-short-enums -Wno-error"
         export LDFLAGS="-static -Wl,-z,nocopyreloc -Wl,--no-undefined $PWD/android-sysroot/usr/lib/crtbegin_static.o -lc -lm -lgcc -lc $PWD/android-sysroot/usr/lib/crtend_android.o"
     else
-        export CFLAGS="-O2 -nostdlib -D__ANDROID__ -DANDROID -DSTDC_HEADERS -I$TEMP_PATH/android-ndk-${ANDROID_NDK_VERSION}/toolchains/arm-linux-androideabi-$ANDROID_GCC_VERSION/prebuilt/linux-x86/lib/gcc/arm-linux-androideabi/$ANDROID_GCC_VERSION_MAJOR/include -I$PWD/android-sysroot/usr/include -fno-short-enums"
+        export CFLAGS="-O2 -nostdlib -D__ANDROID__ -DANDROID -DSTDC_HEADERS -I$TEMP_PATH/android-ndk-${ANDROID_NDK_VERSION}/toolchains/arm-linux-androideabi-$ANDROID_GCC_VERSION/prebuilt/linux-x86/lib/gcc/arm-linux-androideabi/$ANDROID_GCC_VERSION_MAJOR/include -I$PWD/android-sysroot/usr/include -fno-short-enums -Wno-error"
         export LDFLAGS="-static -Wl,-z,nocopyreloc -Wl,--no-undefined $PWD/android-sysroot/usr/lib/crtbegin_static.o -lc -lm -lgcc -lc $PWD/android-sysroot/usr/lib/crtend_android.o"
     fi
 
@@ -1813,6 +1814,7 @@ fi
 prepareHostQt
 prepareSdkInstallerTools
 prepareGDBVersion head $HOST_TAG
+prepareGDBVersion head
 prepareNDKs
 prepareSDKs
 # prepareOpenJDK
