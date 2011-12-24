@@ -45,15 +45,43 @@ function downloadIfNotExists
     fi
 }
 
+function doSed
+{
+    SEARCHVAL=$1
+    shift
+    while [ "$*" != "" ]; do
+        if [ "$OSTYPE_MAJOR" = "darwin" ]
+        then
+            sed -i '.bak' "$SEARCHVAL" $1
+            rm ${1}.bak
+        else
+            sed "$SEARCHVAL" -i $1
+        fi
+        shift
+    done
+}
+
 function makeInstallPython
 {
     if [ ! -f $REPO_SRC_PATH/python-${BUILD_PYTHON}.7z ]
     then
         if [ ! -d Python-2.7.1 ]
         then
-            git clone git://gitorious.org/mingw-python/mingw-python.git Python-2.7.1 || error_msg "Can't clone Python"
+#            if [ "$OSTYPE_MAJOR" = "linux-gnu" ]; then
+#                downloadIfNotExists Python-2.7.1.tar.bz2 http://www.python.org/ftp/python/2.7.1/Python-2.7.1.tar.bz2 || error_msg "Can't download python library"
+#                tar xjvf Python-2.7.1.tar.bz2
+#                USINGMAPYTHON=0
+#            else
+                git clone git://gitorious.org/mingw-python/mingw-python.git Python-2.7.1 || error_msg "Can't clone Python"
+                USINGMAPYTHON=1
+#            fi
         fi
         pushd Python-2.7.1
+        if [ "$USINGMAPYTHON" = "1" ] ; then
+            autoconf
+            touch Include/Python-ast.h
+            touch Include/Python-ast.c
+        fi
         mkdir python-build
         pushd python-build
 #        ../build-python.sh --with-pydebug
@@ -116,27 +144,34 @@ function makeNDKForArch
     ROOTDIR=$2
     REPO_SRC_PATH=$3
     if [ ! "$4" = "" ] ; then
-        GCC_VER=$4
+        GCC_VER_LOCAL=$4
     fi
     if [ "$ARCH" = "arm" ] ; then
         ARCH_ABI=$ARCH-linux-androideabi
     else
         ARCH_ABI=$ARCH
     fi
-    if [ "$GCC_VER" = "4.4.3" ] ; then
+    if [ "$GCC_VER_LOCAL" = "4.4.3" ] ; then
         GMPVERSION=4.3.2
     else
         GMPVERSION=5.0.2
     fi
-    if [ ! -f /usr/ndkb/${ARCH_ABI}-${GCC_VER}-${BUILD_NDK}.tar.bz2 ]; then
+    if [ ! -f /usr/ndkb/${ARCH_ABI}-${GCC_VER_LOCAL}-${BUILD_NDK}.tar.bz2 ]; then
         $NDK/build/tools/rebuild-all-prebuilt.sh --arch=$ARCH --patches-dir=/tmp/ndk-tc-patches --build-dir=/usr/ndkb --verbose --package-dir=/usr/ndkb --gcc-version=$GCC_VER --gdb-path=$GDB_ROOT_PATH_USED --gdb-version=$GDB_VER --mpfr-version=2.4.2 --gmp-version=$GMPVERSION --binutils-version=2.22.51 --toolchain-src-dir=$TCSRC --gdb-with-python=$PYTHONVER
     else
         echo "Skipping NDK build, already done."
-        echo /usr/ndkb/${ARCH_ABI}-${GCC_VER}-${BUILD_NDK}.tar.bz2
+        echo /usr/ndkb/${ARCH_ABI}-${GCC_VER_LOCAL}-${BUILD_NDK}.tar.bz2
     fi
     cp /usr/ndkb/*.bz2 $REPO_SRC_PATH/
 }
 
+# Ok, looks like Google have changed their NDK repo significantly so that it doesn't contain the libraries we need anymore:
+# Used to be:
+# ls /usr/ndkb/platforms/android-9/arch-arm/usr/lib/
+# crtbegin_dynamic.o  crtbegin_static.o  crtend_so.o  libGLESv1_CM.so  libOpenSLES.so  libc.a   libdl.so           liblog.so  libm.so      libstdc++.so    libthread_db.so
+# crtbegin_so.o       crtend_android.o   libEGL.so    libGLESv2.so     libandroid.so   libc.so  libjnigraphics.so  libm.a     libstdc++.a  libthread_db.a  libz.so
+# But now it's:
+# crtbegin_dynamic.o  crtbegin_so.o  crtbegin_static.o  crtend_android.o  crtend_so.o  libc.a  libm.a  libstdc++.a
 function cloneNDK
 {
     mkdir build-${BUILD_NDK}
@@ -145,6 +180,13 @@ function cloneNDK
     then
         env GIT_SSL_NO_VERIFY=true git clone https://github.com/android/platform_development.git development || error_msg "Can't clone development"
 #        git clone git://android.git.kernel.org/platform/development.git development || error_msg "Can't clone development"
+        if [ -n "$PLATFORM_GIT_DATE" ] ; then
+            pushd development
+            REVISION=`git rev-list -n 1 --until="$PLATFORM_GIT_DATE" HEAD`
+            echo "Using platform dev at date '$PLATFORM_GIT_DATE': revision $REVISION"
+            git checkout $REVISION
+            popd
+        fi
     fi
     if [ ! -d "ndk" ]
     then
@@ -163,10 +205,10 @@ function makeNDK
     PYTHONVER=`pwd`/Python-2.7.1/python-build/install-python-${BUILD_PYTHON}
 
     if [ ! "$1" = "" ] ; then
-        GCC_VER=$1
+        GCC_VER_LOCAL=$1
     fi
 
-    if [ "$GCC_VER" = "4.4.3" ] ; then
+    if [ "$GCC_VER_LOCAL" = "4.4.3" ] ; then
         GCC_LINARO=0
     else
         GCC_LINARO=1
@@ -293,21 +335,26 @@ function makeNDK
         git checkout $REVISION
     fi
 
-#    rm -rf gcc-4.6.2
-    if [ ! -d $GCC_VER ]
+
+    if [ "$GCC_VER_LOCAL" != "4.4.3" ]
     then
+        if [ -d gcc-${GCC_VER_LOCAL} ]
+        then
+            rm -rf gcc-${GCC_VER_LOCAL}
+        fi
         if [ "$GCCREPOLINARO" = "" ] ; then
             downloadIfNotExists gcc-linaro-${GCC_VER_LINARO}.tar.bz2 http://launchpad.net/gcc-linaro/4.6/${GCC_VER_LINARO}/+download/gcc-linaro-${GCC_VER_LINARO}.tar.bz2
             tar xjvf gcc-linaro-${GCC_VER_LINARO}.tar.bz2
-            mv gcc-linaro-${GCC_VER_LINARO} ${GCC_VER}
-            echo ${GCC_VER} > gcc-${GCC_VER}/gcc/BASE-VER
+            mv gcc-linaro-${GCC_VER_LINARO} gcc-${GCC_VER_LOCAL}
+            echo ${GCC_VER_LOCAL} > gcc-${GCC_VER_LOCAL}/gcc/BASE-VER
             mkdir -p /tmp/ndk-tc-patches/gcc
             cp $NDK/build/tools/toolchain-patches-linaro-4.6-android-and-win32/*.patch /tmp/ndk-tc-patches/gcc
+            doSed $"s/gcc-4.6.2/gcc-4.6.3/" /tmp/ndk-tc-patches/gcc/*.patch
         else
-            git clone $GCCREPOLINARO gcc-$GCC_VER || error_msg "Can't clone $GCCREPO -> $GCCSRCDIR"
+            git clone $GCCREPOLINARO gcc-$GCC_VER_LOCAL || error_msg "Can't clone $GCCREPO -> $GCCSRCDIR"
         fi
     fi
-    pushd gcc-$GCC_VER
+    pushd gcc-${GCC_VER_LOCAL}
     if [ -d .git ] ; then
         git branch -D windows || echo "Windows branch didn't exist, not a problem."
         git checkout -b windows
@@ -331,10 +378,10 @@ function makeNDK
     echo GDB_ROOT_PATH $GDB_ROOT_PATH_USED
     PYTHONHOME=""
     unset PYTHONHOME
-    makeNDKForArch arm $ROOTDIR $REPO_SRC_PATH $GCC_VER
-    makeNDKForArch x86 $ROOTDIR $REPO_SRC_PATH $GCC_VER
- #    makeNDKForArch mac $ROOTDIR $REPO_SRC_PATH $GCC_VER
-    
+    makeNDKForArch arm $ROOTDIR $REPO_SRC_PATH $GCC_VER_LOCAL
+    makeNDKForArch x86 $ROOTDIR $REPO_SRC_PATH $GCC_VER_LOCAL
+#    makeNDKForArch mac $ROOTDIR $REPO_SRC_PATH $GCC_VER_LOCAL
+
     popd
 }
 
@@ -366,26 +413,6 @@ function unpackGoogleOrLinuxNDK
     pushd /usr/ndki
     rm -rf android-ndk-${NDK_VER}
 
-    # Get the Linux version first.
-#     if [ ! "$OSTYPE_MAJOR" = "linux-gnu" ] ; then
-#         downloadIfNotExists android-ndk-r6b-gdb-7.3.50.20110709-linux-x86.7z http://mingw-and-ndk.googlecode.com/files/android-ndk-r6b-gdb-7.3.50.20110709-linux-x86.7z
-#         7za x android-ndk-r6b-gdb-7.3.50.20110709-linux-x86.7z
-#         pushd android-ndk-${NDK_VER}
-#         rm ndk-stack
-#         find . -name linux-x86 | xargs rm -rf
-#         find . -name "python*" | xargs rm -rf
-#         find . -path "*toolchains*python*include" | xargs rm -rf
-#         find . -type d -path "*toolchains*lib*python*" -name "python*" | xargs rm -rf
-#         find . -type d -path "*toolchains*lib*pkg*" -name "pkg*" | xargs rm -rf
-#         find . -path "*bin/2to3" | xargs rm
-#         find . -path "*bin/idle" | xargs rm
-#         find . -path "*bin/pydoc" | xargs rm
-#         find . -name "*.py" | xargs rm
-#         find . -name "*.pyo" | xargs rm
-#         find . -name "*.pyc" | xargs rm
-#         popd
-#     fi
-
     # Overwrite with the Google version for this OS (need to do this to fix symlinks in headers and libs).
     if [ "$OSTYPE_MAJOR" = "msys" ] ; then
 	# On windows, tar unpacks links as text files with the target as the contents.
@@ -416,8 +443,8 @@ function unpackGoogleOrLinuxNDK
     # Copy across modified ndk build sripts (i.e. scripts to rebuild ndk with).
     cp -rf android-ndk-${NDK_VER}/sources/cxx-stl android-ndk-${NDK_VER}/sources/cxx-stl-google
     cp -rf android-ndk-${NDK_VER}/sources/cxx-stl android-ndk-${NDK_VER}/sources/cxx-stl-4.4.3
-    mv android-ndk-${NDK_VER}/sources/cxx-stl android-ndk-${NDK_VER}/sources/cxx-stl-4.6.2
-#     cp -rf cxx-stl/system cxx-stl-4.6.2
+    mv android-ndk-${NDK_VER}/sources/cxx-stl android-ndk-${NDK_VER}/sources/cxx-stl-$GCC_VER
+#     cp -rf cxx-stl/system cxx-stl-$GCC_VER
 #     cp -rf cxx-stl/system cxx-stl-4.4.3
 
     cp -f $NDK/ndk-build android-ndk-${NDK_VER}/
@@ -431,48 +458,48 @@ function unpackGoogleOrLinuxNDK
 function mixPythonWithNDK
 {
     if [ ! "$1" = "" ] ; then
-       GCC_VER=$1
+       GCC_VER_LOCAL=$1
     fi
-    SRCS_SUFFIX=-$GCC_VER
+    SRCS_SUFFIX=-$GCC_VER_LOCAL
 
     if [ ! -f $REPO_SRC_PATH/python-${BUILD_PYTHON}.7z ]; then
        echo "Failed to find python, $REPO_SRC_PATH/python-${BUILD_PYTHON}.7z"
        exit 1
     fi
-    if [ ! -f $REPO_SRC_PATH/arm-linux-androideabi-${GCC_VER}-gdbserver.tar.bz2 ]; then
-       echo "Failed to find arm gdbserver, $REPO_SRC_PATH/arm-linux-androideabi-${GCC_VER}-gdbserver.tar.bz2"
+    if [ ! -f $REPO_SRC_PATH/arm-linux-androideabi-${GCC_VER_LOCAL}-gdbserver.tar.bz2 ]; then
+       echo "Failed to find arm gdbserver, $REPO_SRC_PATH/arm-linux-androideabi-${GCC_VER_LOCAL}-gdbserver.tar.bz2"
        exit 1
     fi
-    if [ ! -f $REPO_SRC_PATH/arm-linux-androideabi-${GCC_VER}-${BUILD_NDK}.tar.bz2 ]; then
-       echo "Failed to find arm toolchain, $REPO_SRC_PATH/arm-linux-androideabi-${GCC_VER}-${BUILD_NDK}.tar.bz2"
+    if [ ! -f $REPO_SRC_PATH/arm-linux-androideabi-${GCC_VER_LOCAL}-${BUILD_NDK}.tar.bz2 ]; then
+       echo "Failed to find arm toolchain, $REPO_SRC_PATH/arm-linux-androideabi-${GCC_VER_LOCAL}-${BUILD_NDK}.tar.bz2"
        exit 1
     fi
     # x86 gdbserver fails to build.
 ###    if [ ! -f $REPO_SRC_PATH/x86-${GCC_VER}-gdbserver.tar.bz2 ]; then
-###       echo "Failed to find x86 gdbserver, $REPO_SRC_PATH/x86-linux-androideabi-${GCC_VER}-gdbserver.tar.bz2"
+###       echo "Failed to find x86 gdbserver, $REPO_SRC_PATH/x86-linux-androideabi-${GCC_VER_LOCAL}-gdbserver.tar.bz2"
 ###    fi
-    if [ ! -f $REPO_SRC_PATH/x86-${GCC_VER}-${BUILD_NDK}.tar.bz2 ]; then
-       echo "Failed to find x86 toolchain, $REPO_SRC_PATH/x86-linux-androideabi-${GCC_VER}-${BUILD_NDK}.tar.bz2"
+    if [ ! -f $REPO_SRC_PATH/x86-${GCC_VER_LOCAL}-${BUILD_NDK}.tar.bz2 ]; then
+       echo "Failed to find x86 toolchain, $REPO_SRC_PATH/x86-linux-androideabi-${GCC_VER_LOCAL}-${BUILD_NDK}.tar.bz2"
     fi
     pushd /usr/ndki
     mkdir android-ndk-${NDK_VER}
     pushd android-ndk-${NDK_VER}
-    tar -jxvf $REPO_SRC_PATH/arm-linux-androideabi-${GCC_VER}-${BUILD_NDK}.tar.bz2
-    tar -jxvf $REPO_SRC_PATH/x86-${GCC_VER}-${BUILD_NDK}.tar.bz2
+    tar -jxvf $REPO_SRC_PATH/arm-linux-androideabi-${GCC_VER_LOCAL}-${BUILD_NDK}.tar.bz2
+    tar -jxvf $REPO_SRC_PATH/x86-${GCC_VER_LOCAL}-${BUILD_NDK}.tar.bz2
 #    if [ "$OSTYPE_MAJOR" = "linux-gnu" ] ; then
-        find $REPO_SRC_PATH -name "gnu-lib*${GCC_VER}.tar.bz2" | while read i ; do tar -xjvf "$i" ; done
+        find $REPO_SRC_PATH -name "gnu-lib*${GCC_VER_LOCAL}.tar.bz2" | while read i ; do tar -xjvf "$i" ; done
         mkdir sources/cxx-stl${SRCS_SUFFIX}/stlport
         cp sources/cxx-stl-google/stlport/* sources/cxx-stl${SRCS_SUFFIX}/stlport
         cp -rf sources/cxx-stl-google/stlport/src sources/cxx-stl${SRCS_SUFFIX}/stlport/
         cp -rf sources/cxx-stl-google/stlport/stlport sources/cxx-stl${SRCS_SUFFIX}/stlport/
         cp -rf sources/cxx-stl-google/stlport/test sources/cxx-stl${SRCS_SUFFIX}/stlport/
         cp -rf sources/cxx-stl-google/system sources/cxx-stl${SRCS_SUFFIX}/
-        find $REPO_SRC_PATH -name "stlport*${GCC_VER}.tar.bz2" | while read i ; do tar -xjvf "$i" ; done
+        find $REPO_SRC_PATH -name "stlport*${GCC_VER_LOCAL}.tar.bz2" | while read i ; do tar -xjvf "$i" ; done
 #    fi
 
-    tar -jxvf $REPO_SRC_PATH/arm-linux-androideabi-${GCC_VER}-gdbserver.tar.bz2
-    if [ -f $REPO_SRC_PATH/x86-${GCC_VER}-gdbserver.tar.bz2 ] ; then
-	tar -jxvf $REPO_SRC_PATH/x86-${GCC_VER}-gdbserver.tar.bz2
+    tar -jxvf $REPO_SRC_PATH/arm-linux-androideabi-${GCC_VER_LOCAL}-gdbserver.tar.bz2
+    if [ -f $REPO_SRC_PATH/x86-${GCC_VER_LOCAL}-gdbserver.tar.bz2 ] ; then
+	tar -jxvf $REPO_SRC_PATH/x86-${GCC_VER_LOCAL}-gdbserver.tar.bz2
     fi
     # Until x86 gdbserver builds...
     if [ ! "$SRCS_SUFFIX" = "4.4.3" ] ; then
@@ -480,8 +507,8 @@ function mixPythonWithNDK
     fi
 
     # Copy python.
-    if [ -d toolchains/arm-linux-androideabi-${GCC_VER}/prebuilt/${BUILD_NDK} ] ; then
-        pushd toolchains/arm-linux-androideabi-${GCC_VER}/prebuilt/${BUILD_NDK}
+    if [ -d toolchains/arm-linux-androideabi-${GCC_VER_LOCAL}/prebuilt/${BUILD_NDK} ] ; then
+        pushd toolchains/arm-linux-androideabi-${GCC_VER_LOCAL}/prebuilt/${BUILD_NDK}
         if [ "$OSTYPE_MAJOR" = "darwin" ] ; then
             mkdir bin/python
             pushd bin/python
@@ -492,8 +519,8 @@ function mixPythonWithNDK
         fi
         popd
     fi
-    if [ -d toolchains/x86-${GCC_VER}/prebuilt/${BUILD_NDK} ] ; then
-        pushd toolchains/x86-${GCC_VER}/prebuilt/${BUILD_NDK}
+    if [ -d toolchains/x86-${GCC_VER_LOCAL}/prebuilt/${BUILD_NDK} ] ; then
+        pushd toolchains/x86-${GCC_VER_LOCAL}/prebuilt/${BUILD_NDK}
         if [ "$OSTYPE_MAJOR" = "darwin" ] ; then
             mkdir bin/python
             pushd bin/python
@@ -539,10 +566,7 @@ else
 fi
 
 REPO_SRC_PATH=`pwd`/ndk-packages
-# These won't cause any harm on any other system, they're patched into a new branch outside of
-# the normal ndk patching mechanism (using git am).
 mkdir $REPO_SRC_PATH
-PYTHONVER=/usr
 mkdir $TEMP_PATH
 pushd $TEMP_PATH
 
@@ -567,17 +591,17 @@ fi
 cloneNDK
 makeInstallPython
 unpackGoogleOrLinuxNDK
+makeNDK $GCC_VER
 makeNDK 4.4.3
-makeNDK 4.6.2
+mixPythonWithNDK $GCC_VER
 mixPythonWithNDK 4.4.3
-mixPythonWithNDK 4.6.2
 DEFAULT_GCC_VERSION=4.4.3
 if [ "$OSTYPE_MAJOR" = "msys" ] ; then
     cp -rf /usr/ndki/android-ndk-${NDK_VER}/sources/cxx-stl-${DEFAULT_GCC_VERSION} /usr/ndki/android-ndk-${NDK_VER}/sources/cxx-stl
     cp /usr/bin/libwinpthread-1.dll /usr/ndki/android-ndk-${NDK_VER}/toolchains/arm-linux-androideabi-4.4.3/prebuilt/windows/libexec/gcc/arm-linux-androideabi/4.4.3/
-    cp /usr/bin/libwinpthread-1.dll /usr/ndki/android-ndk-${NDK_VER}/toolchains/arm-linux-androideabi-4.6.2/prebuilt/windows/libexec/gcc/arm-linux-androideabi/4.6.2/
+    cp /usr/bin/libwinpthread-1.dll /usr/ndki/android-ndk-${NDK_VER}/toolchains/arm-linux-androideabi-${GCC_VER}/prebuilt/windows/libexec/gcc/arm-linux-androideabi/${GCC_VER}/
     cp /usr/bin/libwinpthread-1.dll /usr/ndki/android-ndk-${NDK_VER}/toolchains/x86-4.4.3/prebuilt/windows/libexec/gcc/i686-android-linux/4.4.3/
-    cp /usr/bin/libwinpthread-1.dll /usr/ndki/android-ndk-${NDK_VER}/toolchains/x86-4.6.2/prebuilt/windows/libexec/gcc/i686-android-linux/4.6.2/
+    cp /usr/bin/libwinpthread-1.dll /usr/ndki/android-ndk-${NDK_VER}/toolchains/x86-${GCC_VER}/prebuilt/windows/libexec/gcc/i686-android-linux/${GCC_VER}/
     mkdir /tmp/cmd-ndk-bits
     pushd /tmp/cmd-ndk-bits
     downloadIfNotExists coreutils-5.3.0-bin.zip http://prdownloads.sourceforge.net/project/gnuwin32/coreutils/5.3.0/coreutils-5.3.0-bin.zip
@@ -603,7 +627,7 @@ else
     ln -s cxx-stl-${DEFAULT_GCC_VERSION} cxx-stl
     popd
 fi
-cp -f /usr/ndki/android-ndk-${NDK_VER}/toolchains/arm-linux-androideabi-4.4.3/*.mk /usr/ndki/android-ndk-${NDK_VER}/toolchains/arm-linux-androideabi-4.6.2/
-cp -f /usr/ndki/android-ndk-${NDK_VER}/toolchains/x86-4.4.3/*.mk /usr/ndki/android-ndk-${NDK_VER}/toolchains/x86-4.6.2/
+cp -f /usr/ndki/android-ndk-${NDK_VER}/toolchains/arm-linux-androideabi-4.4.3/*.mk /usr/ndki/android-ndk-${NDK_VER}/toolchains/arm-linux-androideabi-${GCC_VER}/
+cp -f /usr/ndki/android-ndk-${NDK_VER}/toolchains/x86-4.4.3/*.mk /usr/ndki/android-ndk-${NDK_VER}/toolchains/x86-${GCC_VER}/
 compressFinalNDK
 popd
