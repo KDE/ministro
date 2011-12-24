@@ -349,7 +349,7 @@ function makeNDK
             echo ${GCC_VER_LOCAL} > gcc-${GCC_VER_LOCAL}/gcc/BASE-VER
             mkdir -p /tmp/ndk-tc-patches/gcc
             cp $NDK/build/tools/toolchain-patches-linaro-4.6-android-and-win32/*.patch /tmp/ndk-tc-patches/gcc
-            doSed $"s/gcc-4.6.2/gcc-4.6.3/" /tmp/ndk-tc-patches/gcc/*.patch
+#            doSed $"s/gcc-4.6.2/gcc-4.6.3/" /tmp/ndk-tc-patches/gcc/*.patch
         else
             git clone $GCCREPOLINARO gcc-$GCC_VER_LOCAL || error_msg "Can't clone $GCCREPO -> $GCCSRCDIR"
         fi
