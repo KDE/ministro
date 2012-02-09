@@ -415,9 +415,9 @@ function prepareNecessitasQtCreator
         if [ "$OSTYPE_MAJOR" = "msys" ]; then
             mkdir -p $QTC_INST_PATH/bin
             cp -rf lib/qtcreator/* $QTC_INST_PATH/bin/
-            cp -a /usr/bin/libgcc_s_dw2-1.dll $QTC_INST_PATH/bin/
-            cp -a /usr/bin/libstdc++-6.dll $QTC_INST_PATH/bin/
-            cp -a /usr/bin/libwinpthread-1.dll $QTC_INST_PATH/bin/
+            cp -a /mingw/bin/libgcc_s_dw2-1.dll $QTC_INST_PATH/bin/
+            cp -a /mingw/bin/libstdc++-6.dll $QTC_INST_PATH/bin/
+            cp -a /mingw/bin/libwinpthread-1.dll $QTC_INST_PATH/bin/
             QT_LIB_DEST=$QTC_INST_PATH/bin/
             cp -a $SHARED_QT_PATH/lib/* $QT_LIB_DEST
             cp -a bin/necessitas.bat $QTC_INST_PATH/bin/
@@ -710,6 +710,11 @@ function prepareGDB
     pyfullversion=2.7.1
     install_dir=$PWD/install
     target_dir=$PWD/gdb-src/$GDB_FLDR_NAME
+    if [ -z $GDB_TARG_HOST_TAG ] ; then
+        py_target_dir=$target_dir/bin
+    else
+        py_target_dir=$target_dir
+    fi
     mkdir -p $target_dir
 
     OLDPATH=$PATH
@@ -820,29 +825,29 @@ function prepareGDB
     fi
 
     pushd Python-$pyfullversion
-    mkdir -p $target_dir/python/lib
     cp LICENSE $target_dir/PYTHON-LICENSE
-    cp libpython$pyversion$SHLIB_EXT $target_dir/
+    mkdir -p $py_target_dir/python/lib
+    cp libpython$pyversion$SHLIB_EXT $py_target_dir/
     if [ -f libpython$pyversion.a ] ; then
-        cp libpython$pyversion.a $target_dir/python/lib/
+        cp libpython$pyversion.a $py_target_dir/python/lib/
     fi
     popd
     export PATH=$OLDPATH
-    cp -a $install_dir/lib/python$pyversion $target_dir/python/lib/
-    mkdir -p $target_dir/python/include/python$pyversion
-    mkdir -p $target_dir/python/bin
-    cp $install_dir/include/python$pyversion/pyconfig.h $target_dir/python/include/python$pyversion/
+    cp -a $install_dir/lib/python$pyversion $py_target_dir/python/lib/
+    mkdir -p $py_target_dir/python/include/python$pyversion
+    mkdir -p $py_target_dir/python/bin
+    cp $install_dir/include/python$pyversion/pyconfig.h $py_target_dir/python/include/python$pyversion/
     # Remove the $SUFFIX if present (OS X)
     if [ "$OSTYPE_MAJOR" = "darwin" ]; then
         mv $install_dir/bin/python$pyversion$SUFFIX $install_dir/bin/python$pyversion
         mv $install_dir/bin/python$SUFFIX $install_dir/bin/python
     fi
-    cp -a $install_dir/bin/python$pyversion* $target_dir/python/bin/
+    cp -a $install_dir/bin/python$pyversion* $py_target_dir/python/bin/
     if [ "$OSTYPE_MAJOR" = "msys" ] ; then
-        cp -fr $install_dir/bin/Lib $target_dir/
-        cp -f $install_dir/bin/libpython$pyversion.dll $target_dir/python/bin/
+        cp -fr $install_dir/bin/Lib $py_target_dir/
+        cp -f $install_dir/bin/libpython$pyversion.dll $py_target_dir/python/bin/
     fi
-    $STRIP $target_dir/python/bin/python$pyversion$EXE_EXT
+    $STRIP $py_target_dir/python/bin/python$pyversion$EXE_EXT
 
     # Something is setting PYTHONHOME as an Env. Var for Windows and I'm not sure what... installer? NQTC? Python build process?
     # TODOMA :: Fix the real problem.
@@ -1813,8 +1818,8 @@ if [ "$OSTYPE_MAJOR" = "msys" ] ; then
 fi
 prepareHostQt
 prepareSdkInstallerTools
-prepareGDBVersion head $HOST_TAG
-prepareGDBVersion head
+#prepareGDBVersion head
+#prepareGDBVersion head $HOST_TAG
 prepareNDKs
 prepareSDKs
 # prepareOpenJDK
