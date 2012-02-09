@@ -1,23 +1,30 @@
 #!/bin/bash
 
 mkdir -p /usr/local/bin
+
 mkdir mingw-temp
 pushd mingw-temp
 
-wget -c http://mingw-and-ndk.googlecode.com/files/make.exe
-cp make.exe /usr/bin/mingw32-make.exef
+	# Fixes writing to stdout (was in ascii mode)
+	wget -c http://mingw-and-ndk.googlecode.com/files/wget.exe
+	cp wget.exe /usr/local/bin
+	# Fixes shell detection for running without sh.exe
+	wget -c http://mingw-and-ndk.googlecode.com/files/make.exe
+	cp make.exe /usr/local/bin/mingw32-make.exe
+	# Fixes <Del> <Home> <End> <Alt-Left> <Alt-Right> to perform useful functions.
+	wget -c http://mingw-and-ndk.googlecode.com/files/.inputrc.mingw -O ~/.inputrc
 
-wget -c http://sourceforge.net/projects/infozip/files/UnZip%206.x%20%28latest%29/UnZip%206.0/unzip60.tar.gz/download
-tar -xvzf unzip60.tar.gz
-pushd unzip60
-mingw32-make.exe -f win32/Makefile.gcc
-cp unzip.exe /usr/local/bin
+	wget -c http://garr.dl.sourceforge.net/project/infozip/UnZip%206.x%20%28latest%29/UnZip%206.0/unzip60.tar.gz
+	tar -xvzf unzip60.tar.gz
+	pushd unzip60
+	mingw32-make.exe -f win32/Makefile.gcc
+	cp unzip.exe /usr/local/bin
 popd
 
 wget -c http://downloads.sourceforge.net/sevenzip/7za920.zip
 SEVEN7LOC=$PWD
 pushd /usr/local/bin
-unzip -o $SEVEN7LOC/7za920.zip
+	unzip -o $SEVEN7LOC/7za920.zip
 popd
 HOSTBUILDTARGET=mingw
 mkdir $HOSTBUILDTARGET
@@ -51,9 +58,9 @@ popd
 # Get git. Awkwardly, git is packed up with a full mingw/msys env, so unzip
 # it to a temporary folder and copy across only certain bits, also, copy them
 # to /usr/local/bin so as not to pollute /usr/bin
-wget -c http://msysgit.googlecode.com/files/PortableGit-1.7.7.1-preview20111027.7z
+wget -c http://msysgit.googlecode.com/files/PortableGit-1.7.8-preview20111206.7z
 mkdir git-temp
-"C:\Program Files\7-zip\7z.exe" x -y -ogit-temp PortableGit-1.7.7.1-preview20111027.7z
+"C:\Program Files\7-zip\7z.exe" x -y -ogit-temp PortableGit-1.7.8-preview20111206.7z
 mkdir -p /usr/local/bin
 cp git-temp/bin/git* /usr/local/bin/
 cp git-temp/bin/ssh* /usr/local/bin/
@@ -70,6 +77,8 @@ cp -r git-temp/share/git-core /usr/local/share/
 cp -r git-temp/share/gitk /usr/local/share/
 mkdir -p /usr/local/libexec
 cp -r git-temp/libexec/* /usr/local/libexec/
+wget -c http://mingw-and-ndk.googlecode.com/files/win-mingw-nano.7z
+7za x win-mingw-nano.7z -o/usr/local/
 
 # Fix mingw include/sys/types.h so that cross libgcc builds.
 cat > ./mingw-sys-types-caddr.patch <<DELIM
@@ -98,6 +107,8 @@ popd
 
 mkdir -p /usr/local/bin
 mkdir -p /usr/local/include
+
+exit 1
 
 # Remove the MinGW iconv.exe and dll, we require a static iconv.
 mv /usr/bin/iconv.exe /usr/local/bin/
