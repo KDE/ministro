@@ -104,7 +104,7 @@ if [ "$OSTYPE_MAJOR" = "msys" ] ; then
     JOBS=`expr $NUMBER_OF_PROCESSORS + 2`
 else
     if [ "$OSTYPE_MAJOR" = "darwin" ] ; then
-        HOST_CFG_OPTIONS=" -platform macx-g++42 -sdk /Developer-3.2.5/SDKs/MacOSX10.5.sdk -arch i386 -arch x86_64 -cocoa -prefix . "
+        HOST_CFG_OPTIONS=" -platform macx-g++ -sdk /Developer/SDKs/MacOSX10.6.sdk -arch i386 -arch x86_64 -cocoa -prefix . "
         HOST_QM_CFG_OPTIONS="CONFIG+=x86 CONFIG+=x86_64"
         # -reduce-exports doesn't work for static Mac OS X i386 build.
         # (ld: bad codegen, pointer diff in fulltextsearch::clucene::QHelpSearchIndexReaderClucene::run()     to global weak symbol vtable for QtSharedPointer::ExternalRefCountDatafor architecture i386)
