@@ -241,6 +241,21 @@ function makeNDK
 #        git clone git://android.git.kernel.org/toolchain/binutils.git binutils || error_msg "Can't clone binutils"
         git clone git://git.linaro.org/people/bernhardrosenkranzer/binutils.git binutils || error_msg "Can't clone binutils"
     fi
+    if [ ! -d "binutils/binutils-2.22" ]
+    then
+		pushd binutils
+		downloadIfNotExists binutils-2.22.tar.bz2 http://sourceware.mirrors.tds.net/pub/sourceware.org/binutils/releases/binutils-2.22.tar.bz2
+		tar -xjf binutils-2.22.tar.bz2
+		popd
+	fi
+    if [ ! -d "binutils/binutils-2.22.51" ]
+    then
+		pushd binutils
+		downloadIfNotExists binutils-2.22.51.tar.bz2 http://sourceware.mirrors.tds.net/pub/sourceware.org/binutils/snapshots/binutils-2.22.51.tar.bz2
+		tar -xjf binutils-2.22.51.tar.bz2
+		popd
+	fi
+
     if [ ! -d "gmp" ]
     then
 #        git clone git://android.git.kernel.org/toolchain/gmp.git gmp || error_msg "Can't clone gmp"
@@ -252,6 +267,14 @@ function makeNDK
         pushd gmp
         downloadIfNotExists gmp-4.3.2.tar.bz2 ftp://ftp.gnu.org/gnu/gmp/gmp-4.3.2.tar.bz2
         tar xjvf gmp-4.3.2.tar.bz2
+        popd
+    fi
+
+    if [ ! -d "gmp/gmp-5.0.2" ]
+    then
+        pushd gmp
+        downloadIfNotExists gmp-5.0.2.tar.bz2 ftp://ftp.gnu.org/gnu/gmp/gmp-5.0.2.tar.bz2
+        tar xjvf gmp-5.0.2.tar.bz2
         popd
     fi
 
@@ -345,10 +368,17 @@ function makeNDK
         if [ "$GCCREPOLINARO" = "" ] ; then
             downloadIfNotExists gcc-linaro-${GCC_VER_LINARO}.tar.bz2 http://launchpad.net/gcc-linaro/4.6/${GCC_VER_LINARO}/+download/gcc-linaro-${GCC_VER_LINARO}.tar.bz2
             tar xjvf gcc-linaro-${GCC_VER_LINARO}.tar.bz2
+            # Horrible, should sort my patches into the correct folders. In fact, should re-work this whole script and my ndk repo.
             mv gcc-linaro-${GCC_VER_LINARO} gcc-${GCC_VER_LOCAL}
             echo ${GCC_VER_LOCAL} > gcc-${GCC_VER_LOCAL}/gcc/BASE-VER
             mkdir -p /tmp/ndk-tc-patches/gcc
             cp $NDK/build/tools/toolchain-patches-linaro-4.6-android-and-win32/*.patch /tmp/ndk-tc-patches/gcc
+            mkdir /tmp/ndk-tc-patches/binutils
+            mv /tmp/ndk-tc-patches/gcc/*binutils* /tmp/ndk-tc-patches/binutils
+            mkdir /tmp/ndk-tc-patches/ppl
+            mv /tmp/ndk-tc-patches/gcc/*ppl* /tmp/ndk-tc-patches/ppl
+            mkdir /tmp/ndk-tc-patches/gmp
+            mv /tmp/ndk-tc-patches/gcc/*gmp* /tmp/ndk-tc-patches/gmp
 #            doSed $"s/gcc-4.6.2/gcc-4.6.3/" /tmp/ndk-tc-patches/gcc/*.patch
         else
             git clone $GCCREPOLINARO gcc-$GCC_VER_LOCAL || error_msg "Can't clone $GCCREPO -> $GCCSRCDIR"
