@@ -228,6 +228,26 @@ function makeNDK
     mkdir src
     pushd src
 
+    rm -rf /tmp/ndk-tc-patches
+    [[ ! -f patched ]] && rm -f patched
+    mkdir /tmp/ndk-tc-patches || echo "Can't mkdir"
+    cp -rf $NDK/build/tools/toolchain-patches/* /tmp/ndk-tc-patches
+
+    if [ "$GCC_VER_LOCAL" != "4.4.3" ]
+    then
+        if [ -d gcc-${GCC_VER_LOCAL} ]
+        then
+            rm -rf gcc-${GCC_VER_LOCAL}
+        fi
+        if [ "$GCCREPOLINARO" = "" ] ; then
+            # Horrible, should sort my patches into the correct folders. In fact, should re-work this whole script and my ndk repo.
+            cp -rf $NDK/build/tools/toolchain-patches-linaro-4.6-android-and-win32/* /tmp/ndk-tc-patches
+            rm -rf /tmp/ndk-tc-patches/unused
+#            doSed $"s/gcc-4.6.2/gcc-4.6.3/" /tmp/ndk-tc-patches/gcc/*.patch
+        else
+            git clone $GCCREPOLINARO gcc-$GCC_VER_LOCAL || error_msg "Can't clone $GCCREPO -> $GCCSRCDIR"
+        fi
+    fi
 
     GCCSRCDIR="gcc"
     GCCREPO=git://gitorious.org/toolchain-mingw-android/mingw-android-toolchain-gcc.git
@@ -238,40 +258,23 @@ function makeNDK
 
     # reset so that ndk r6b patches apply (usually this will undo the previously applied patches).
     pushd $GCCSRCDIR
-    git reset --hard
-    git checkout --force integration
-    if [ -n "$GCC_GIT_DATE" ] ; then
-        REVISION=`git rev-list -n 1 --until="$GCC_GIT_DATE" HEAD`
-        echo "Using sources for date '$GCC_GIT_DATE': toolchain/$1 revision $REVISION"
-        git checkout $REVISION
-    fi
-
 
     if [ "$GCC_VER_LOCAL" != "4.4.3" ]
     then
-        if [ -d gcc-${GCC_VER_LOCAL} ]
-        then
-            rm -rf gcc-${GCC_VER_LOCAL}
-        fi
-        if [ "$GCCREPOLINARO" = "" ] ; then
-            downloadIfNotExists gcc-linaro-${GCC_VER_LINARO}.tar.bz2 http://launchpad.net/gcc-linaro/4.6/${GCC_VER_LINARO}/+download/gcc-linaro-${GCC_VER_LINARO}.tar.bz2
-            tar xjf gcc-linaro-${GCC_VER_LINARO}.tar.bz2
-            # Horrible, should sort my patches into the correct folders. In fact, should re-work this whole script and my ndk repo.
-            mv gcc-linaro-${GCC_VER_LINARO} gcc-${GCC_VER_LOCAL}
-            echo ${GCC_VER_LOCAL} > gcc-${GCC_VER_LOCAL}/gcc/BASE-VER
-            mkdir -p /tmp/ndk-tc-patches/gcc
-            cp $NDK/build/tools/toolchain-patches-linaro-4.6-android-and-win32/*.patch /tmp/ndk-tc-patches/gcc
-            mkdir /tmp/ndk-tc-patches/binutils
-            mv /tmp/ndk-tc-patches/gcc/*binutils* /tmp/ndk-tc-patches/binutils
-            mkdir /tmp/ndk-tc-patches/ppl
-            mv /tmp/ndk-tc-patches/gcc/*ppl* /tmp/ndk-tc-patches/ppl
-            mkdir /tmp/ndk-tc-patches/gmp
-            mv /tmp/ndk-tc-patches/gcc/*gmp* /tmp/ndk-tc-patches/gmp
-#            doSed $"s/gcc-4.6.2/gcc-4.6.3/" /tmp/ndk-tc-patches/gcc/*.patch
-        else
-            git clone $GCCREPOLINARO gcc-$GCC_VER_LOCAL || error_msg "Can't clone $GCCREPO -> $GCCSRCDIR"
-        fi
-    fi
+		downloadIfNotExists gcc-linaro-${GCC_VER_LINARO}.tar.bz2 http://launchpad.net/gcc-linaro/4.6/${GCC_VER_LINARO}/+download/gcc-linaro-${GCC_VER_LINARO}.tar.bz2
+		tar xjf gcc-linaro-${GCC_VER_LINARO}.tar.bz2
+		mv gcc-linaro-${GCC_VER_LINARO} gcc-${GCC_VER_LOCAL}
+		echo ${GCC_VER_LOCAL} > gcc-${GCC_VER_LOCAL}/gcc/BASE-VER
+	fi
+ 
+#    git reset --hard
+#    git checkout --force integration
+#    if [ -n "$GCC_GIT_DATE" ] ; then
+#        REVISION=`git rev-list -n 1 --until="$GCC_GIT_DATE" HEAD`
+#        echo "Using sources for date '$GCC_GIT_DATE': toolchain/$1 revision $REVISION"
+#        git checkout $REVISION
+#    fi
+
     pushd gcc-${GCC_VER_LOCAL}
     if [ -d .git ] ; then
         git branch -D windows || echo "Windows branch didn't exist, not a problem."
@@ -396,11 +399,6 @@ function makeNDK
         tar xzf cloog-ppl-0.15.11.tar.gz
         popd
     fi
-
-    rm -rf /tmp/ndk-tc-patches
-    rm -f patched
-    mkdir /tmp/ndk-tc-patches || echo "Can't mkdir"
-    cp -rf $NDK/build/tools/toolchain-patches/* /tmp/ndk-tc-patches
 
     mkdir gdb
     if [ ! -d "ma-gdb" ]
@@ -641,10 +639,10 @@ fi
 cloneNDK
 makeInstallPython
 unpackGoogleOrLinuxNDK
-makeNDK $GCC_VER
 makeNDK 4.4.3
+makeNDK $GCC_VER
 mixPythonWithNDK $GCC_VER
-mixPythonWithNDK 4.4.3
+# mixPythonWithNDK 4.4.3
 DEFAULT_GCC_VERSION=4.4.3
 if [ "$OSTYPE_MAJOR" = "msys" ] ; then
     cp -rf /usr/ndki/android-ndk-${NDK_VER}/sources/cxx-stl-${DEFAULT_GCC_VERSION} /usr/ndki/android-ndk-${NDK_VER}/sources/cxx-stl
