@@ -20,6 +20,8 @@
 
 . ndk_vars.sh
 
+ANDROID_GIT_URL=android.googlesource.com
+
 function error_msg
 {
     echo $1 >&2
@@ -65,18 +67,20 @@ function makeInstallPython
 
 function makeInstallMinGWBits
 {
-    if [ ! -f /usr/lib/libcurses.a ] ; then
+	# May need to install all this to /mingw and /usr.
+	HOSTPREFIX=/mingw
+    if [ ! -f $HOSTPREFIX/lib/libcurses.a ] ; then
         wget -c http://downloads.sourceforge.net/pdcurses/pdcurses/3.4/PDCurses-3.4.tar.gz
         rm -rf PDCurses-3.4
         tar -xvzf PDCurses-3.4.tar.gz
         pushd PDCurses-3.4/win32
         sed '90s/-copy/-cp/' mingwin32.mak > mingwin32-fixed.mak
         make -f mingwin32-fixed.mak WIDE=Y UTF8=Y DLL=N
-        cp pdcurses.a /usr/lib/libcurses.a
-        cp pdcurses.a /usr/lib/libncurses.a
-        cp pdcurses.a /usr/lib/libpdcurses.a
-        cp ../curses.h /usr/include
-        cp ../panel.h /usr/include
+        cp pdcurses.a $HOSTPREFIX/lib/libcurses.a
+        cp pdcurses.a $HOSTPREFIX/lib/libncurses.a
+        cp pdcurses.a $HOSTPREFIX/lib/libpdcurses.a
+        cp ../curses.h $HOSTPREFIX/include
+        cp ../panel.h $HOSTPREFIX/include
         popd
     fi
 
@@ -85,7 +89,7 @@ function makeInstallMinGWBits
         rm -rf readline-6.2
         tar -xvzf readline-6.2.tar.gz
         pushd readline-6.2
-        CFLAGS=-O2 && ./configure --enable-static --disable-shared --with-curses --enable-multibyte --prefix=/usr CFLAGS=-O2
+        CFLAGS=-O2 && ./configure --enable-static --disable-shared --with-curses --enable-multibyte --prefix=$HOSTPREFIX CFLAGS=-O2
         make && make install
         popd
     fi
@@ -148,22 +152,22 @@ function makeNDK
 
     if [ ! -d "mpfr" ]
     then
-        git clone git://android.git.kernel.org/toolchain/mpfr.git mpfr || error_msg "Can't clone mpfr"
+        git clone http://$ANDROID_GIT_URL/toolchain/mpfr.git mpfr || error_msg "Can't clone mpfr"
         pushd mpfr
         downloadIfNotExists mpfr-2.4.2.tar.bz2 http://www.mpfr.org/mpfr-2.4.2/mpfr-2.4.2.tar.bz2
         popd
     fi
     if [ ! -d "binutils" ]
     then
-        git clone git://android.git.kernel.org/toolchain/binutils.git binutils || error_msg "Can't clone binutils"
+        git clone http://$ANDROID_GIT_URL/toolchain/binutils.git binutils || error_msg "Can't clone binutils"
     fi
     if [ ! -d "gmp" ]
     then
-        git clone git://android.git.kernel.org/toolchain/gmp.git gmp || error_msg "Can't clone gmp"
+        git clone http://$ANDROID_GIT_URL/toolchain/gmp.git gmp || error_msg "Can't clone gmp"
     fi
     if [ ! -d "gold" ]
     then
-        git clone git://android.git.kernel.org/toolchain/gold.git gold || error_msg "Can't clone gold"
+        git clone http://$ANDROID_GIT_URL/toolchain/gold.git gold || error_msg "Can't clone gold"
     fi
     if [ ! -d "build" ]
     then
@@ -207,7 +211,7 @@ function makeNDK
     pushd build-${BUILD_NDK}
 	if [ ! -d "development" ]
 	then
-        git clone git://android.git.kernel.org/platform/development.git development || error_msg "Can't clone development"
+        git clone http://$ANDROID_GIT_URL/platform/development.git development || error_msg "Can't clone development"
 	fi
 	if [ ! -d "ndk" ]
 	then

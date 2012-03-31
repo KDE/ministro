@@ -69,7 +69,7 @@ function makeInstallPython
         then
 #            if [ "$OSTYPE_MAJOR" = "linux-gnu" ]; then
 #                downloadIfNotExists Python-2.7.1.tar.bz2 http://www.python.org/ftp/python/2.7.1/Python-2.7.1.tar.bz2 || error_msg "Can't download python library"
-#                tar xjvf Python-2.7.1.tar.bz2
+#                tar xjf Python-2.7.1.tar.bz2
 #                USINGMAPYTHON=0
 #            else
                 git clone git://gitorious.org/mingw-python/mingw-python.git Python-2.7.1 || error_msg "Can't clone Python"
@@ -95,27 +95,38 @@ function makeInstallPython
 
 function makeInstallMinGWBits
 {
-    if [ ! -f /usr/lib/libcurses.a ] ; then
+    if [ ! -f /mingw/lib/libcurses.a ] ; then
         wget -c http://downloads.sourceforge.net/pdcurses/pdcurses/3.4/PDCurses-3.4.tar.gz
         rm -rf PDCurses-3.4
-        tar -xvzf PDCurses-3.4.tar.gz
+        tar -xzf PDCurses-3.4.tar.gz
         pushd PDCurses-3.4/win32
         sed '90s/-copy/-cp/' mingwin32.mak > mingwin32-fixed.mak
         make -f mingwin32-fixed.mak WIDE=Y UTF8=Y DLL=N
-        cp pdcurses.a /usr/lib/libcurses.a
-        cp pdcurses.a /usr/lib/libncurses.a
-        cp pdcurses.a /usr/lib/libpdcurses.a
-        cp ../curses.h /usr/include
-        cp ../panel.h /usr/include
+        cp pdcurses.a /mingw/lib/libcurses.a
+        cp pdcurses.a /mingw/lib/libncurses.a
+        cp pdcurses.a /mingw/lib/libpdcurses.a
+        cp ../curses.h /mingw/include
+        cp ../panel.h /mingw/include
         popd
     fi
 
-    if [ ! -f /usr/lib/libreadline.a ] ; then
+	if [ ! -f /mingw/lib/libdl.dll.a ] ; then
+		wget -c http://dlfcn-win32.googlecode.com/files/dlfcn-win32-r19.tar.bz2
+		rm -rf dlfcn-win32-r19
+        tar -xjf dlfcn-win32-r19.tar.bz2
+        pushd dlfcn-win32-r19
+        CFLAGS=-O2 && ./configure --enable-shared --disable-static --prefix=/mingw
+        make
+        make install
+        popd
+	fi
+	
+    if [ ! -f /mingw/lib/libreadline.a ] ; then
         wget -c http://ftp.gnu.org/pub/gnu/readline/readline-6.2.tar.gz
         rm -rf readline-6.2
-        tar -xvzf readline-6.2.tar.gz
+        tar -xzf readline-6.2.tar.gz
         pushd readline-6.2
-        CFLAGS=-O2 && ./configure --enable-static --disable-shared --with-curses --enable-multibyte --prefix=/usr CFLAGS=-O2
+        CFLAGS=-O2 && ./configure --enable-static --disable-shared --with-curses --enable-multibyte --prefix=/mingw CFLAGS=-O2
         make && make install
         popd
     fi
@@ -217,6 +228,59 @@ function makeNDK
     mkdir src
     pushd src
 
+
+    GCCSRCDIR="gcc"
+    GCCREPO=git://gitorious.org/toolchain-mingw-android/mingw-android-toolchain-gcc.git
+    if [ ! -d "$GCCSRCDIR" ]
+    then
+        git clone $GCCREPO $GCCSRCDIR || error_msg "Can't clone $GCCREPO -> $GCCSRCDIR"
+    fi
+
+    # reset so that ndk r6b patches apply (usually this will undo the previously applied patches).
+    pushd $GCCSRCDIR
+    git reset --hard
+    git checkout --force integration
+    if [ -n "$GCC_GIT_DATE" ] ; then
+        REVISION=`git rev-list -n 1 --until="$GCC_GIT_DATE" HEAD`
+        echo "Using sources for date '$GCC_GIT_DATE': toolchain/$1 revision $REVISION"
+        git checkout $REVISION
+    fi
+
+
+    if [ "$GCC_VER_LOCAL" != "4.4.3" ]
+    then
+        if [ -d gcc-${GCC_VER_LOCAL} ]
+        then
+            rm -rf gcc-${GCC_VER_LOCAL}
+        fi
+        if [ "$GCCREPOLINARO" = "" ] ; then
+            downloadIfNotExists gcc-linaro-${GCC_VER_LINARO}.tar.bz2 http://launchpad.net/gcc-linaro/4.6/${GCC_VER_LINARO}/+download/gcc-linaro-${GCC_VER_LINARO}.tar.bz2
+            tar xjf gcc-linaro-${GCC_VER_LINARO}.tar.bz2
+            # Horrible, should sort my patches into the correct folders. In fact, should re-work this whole script and my ndk repo.
+            mv gcc-linaro-${GCC_VER_LINARO} gcc-${GCC_VER_LOCAL}
+            echo ${GCC_VER_LOCAL} > gcc-${GCC_VER_LOCAL}/gcc/BASE-VER
+            mkdir -p /tmp/ndk-tc-patches/gcc
+            cp $NDK/build/tools/toolchain-patches-linaro-4.6-android-and-win32/*.patch /tmp/ndk-tc-patches/gcc
+            mkdir /tmp/ndk-tc-patches/binutils
+            mv /tmp/ndk-tc-patches/gcc/*binutils* /tmp/ndk-tc-patches/binutils
+            mkdir /tmp/ndk-tc-patches/ppl
+            mv /tmp/ndk-tc-patches/gcc/*ppl* /tmp/ndk-tc-patches/ppl
+            mkdir /tmp/ndk-tc-patches/gmp
+            mv /tmp/ndk-tc-patches/gcc/*gmp* /tmp/ndk-tc-patches/gmp
+#            doSed $"s/gcc-4.6.2/gcc-4.6.3/" /tmp/ndk-tc-patches/gcc/*.patch
+        else
+            git clone $GCCREPOLINARO gcc-$GCC_VER_LOCAL || error_msg "Can't clone $GCCREPO -> $GCCSRCDIR"
+        fi
+    fi
+    pushd gcc-${GCC_VER_LOCAL}
+    if [ -d .git ] ; then
+        git branch -D windows || echo "Windows branch didn't exist, not a problem."
+        git checkout -b windows
+        git am $NDK/build/tools/toolchain-patches-linaro-4.6-android-and-win32/*.patch
+    fi
+    popd
+    popd
+
     if [ ! -d $PYTHONVER ] ; then
         if [ -f $REPO_SRC_PATH/python-${BUILD_PYTHON}.7z ]; then
             mkdir -p $PYTHONVER
@@ -266,7 +330,15 @@ function makeNDK
     then
         pushd gmp
         downloadIfNotExists gmp-4.3.2.tar.bz2 ftp://ftp.gnu.org/gnu/gmp/gmp-4.3.2.tar.bz2
-        tar xjvf gmp-4.3.2.tar.bz2
+        tar xjf gmp-4.3.2.tar.bz2
+        popd
+    fi
+
+    if [ ! -d "gmp/gmp-5.0.2" ]
+    then
+        pushd gmp
+        downloadIfNotExists gmp-5.0.2.tar.bz2 ftp://ftp.gnu.org/gnu/gmp/gmp-5.0.2.tar.bz2
+        tar xjf gmp-5.0.2.tar.bz2
         popd
     fi
 
@@ -299,7 +371,7 @@ function makeNDK
     pushd mpc
 #    downloadIfNotExists mpc-0.9.tar.gz http://www.multiprecision.org/mpc/download/mpc-0.9.tar.gz
     downloadIfNotExists mpc-0.9.tar.gz http://pkgs.fedoraproject.org/repo/pkgs/libmpc/mpc-0.9.tar.gz/0d6acab8d214bd7d1fbbc593e83dd00d/mpc-0.9.tar.gz
-    tar xzvf mpc-0.9.tar.gz
+    tar xzf mpc-0.9.tar.gz
     popd
 
     if [ ! -d "ppl" ]
@@ -307,9 +379,9 @@ function makeNDK
         mkdir ppl
         pushd ppl
         downloadIfNotExists ppl-0.11.2.tar.bz2 ftp://ftp.cs.unipr.it/pub/ppl/releases/0.11.2/ppl-0.11.2.tar.bz2
-        tar xjvf ppl-0.11.2.tar.bz2
+        tar xjf ppl-0.11.2.tar.bz2
         downloadIfNotExists ppl-0.10.2.tar.bz2 ftp://ftp.cs.unipr.it/pub/ppl/releases/0.10.2/ppl-0.10.2.tar.bz2
-        tar xjvf ppl-0.10.2.tar.bz2
+        tar xjf ppl-0.10.2.tar.bz2
         popd
     fi
 
@@ -319,9 +391,9 @@ function makeNDK
         pushd cloog
         downloadIfNotExists cloog-0.16.3.tar.gz http://www.bastoul.net/cloog/pages/download/cloog-0.16.3.tar.gz
 #        downloadIfNotExists cloog-0.16.3.tar.gz http://www.kotnet.org/~skimo/cloog/cloog-0.16.3.tar.gz
-        tar xzvf cloog-0.16.3.tar.gz
+        tar xzf cloog-0.16.3.tar.gz
         downloadIfNotExists cloog-ppl-0.15.11.tar.gz http://gcc-uk.internet.bs/infrastructure/cloog-ppl-0.15.11.tar.gz
-        tar xzvf cloog-ppl-0.15.11.tar.gz
+        tar xzf cloog-ppl-0.15.11.tar.gz
         popd
     fi
 
@@ -339,58 +411,6 @@ function makeNDK
         git checkout $GDB_BRANCH
         git reset --hard
         GDB_ROOT_PATH_USED=$PWD/$GDB_ROOT_PATH
-    popd
-
-    GCCSRCDIR="gcc"
-    GCCREPO=git://gitorious.org/toolchain-mingw-android/mingw-android-toolchain-gcc.git
-    if [ ! -d "$GCCSRCDIR" ]
-    then
-        git clone $GCCREPO $GCCSRCDIR || error_msg "Can't clone $GCCREPO -> $GCCSRCDIR"
-    fi
-
-    # reset so that ndk r6b patches apply (usually this will undo the previously applied patches).
-    pushd $GCCSRCDIR
-    git reset --hard
-    git checkout --force integration
-    if [ -n "$GCC_GIT_DATE" ] ; then
-        REVISION=`git rev-list -n 1 --until="$GCC_GIT_DATE" HEAD`
-        echo "Using sources for date '$GCC_GIT_DATE': toolchain/$1 revision $REVISION"
-        git checkout $REVISION
-    fi
-
-
-    if [ "$GCC_VER_LOCAL" != "4.4.3" ]
-    then
-        if [ -d gcc-${GCC_VER_LOCAL} ]
-        then
-            rm -rf gcc-${GCC_VER_LOCAL}
-        fi
-        if [ "$GCCREPOLINARO" = "" ] ; then
-            downloadIfNotExists gcc-linaro-${GCC_VER_LINARO}.tar.bz2 http://launchpad.net/gcc-linaro/4.6/${GCC_VER_LINARO}/+download/gcc-linaro-${GCC_VER_LINARO}.tar.bz2
-            tar xjvf gcc-linaro-${GCC_VER_LINARO}.tar.bz2
-            # Horrible, should sort my patches into the correct folders. In fact, should re-work this whole script and my ndk repo.
-            mv gcc-linaro-${GCC_VER_LINARO} gcc-${GCC_VER_LOCAL}
-            echo ${GCC_VER_LOCAL} > gcc-${GCC_VER_LOCAL}/gcc/BASE-VER
-            mkdir -p /tmp/ndk-tc-patches/gcc
-            cp $NDK/build/tools/toolchain-patches-linaro-4.6-android-and-win32/*.patch /tmp/ndk-tc-patches/gcc
-            mkdir /tmp/ndk-tc-patches/binutils
-            mv /tmp/ndk-tc-patches/gcc/*binutils* /tmp/ndk-tc-patches/binutils
-            mkdir /tmp/ndk-tc-patches/ppl
-            mv /tmp/ndk-tc-patches/gcc/*ppl* /tmp/ndk-tc-patches/ppl
-            mkdir /tmp/ndk-tc-patches/gmp
-            mv /tmp/ndk-tc-patches/gcc/*gmp* /tmp/ndk-tc-patches/gmp
-#            doSed $"s/gcc-4.6.2/gcc-4.6.3/" /tmp/ndk-tc-patches/gcc/*.patch
-        else
-            git clone $GCCREPOLINARO gcc-$GCC_VER_LOCAL || error_msg "Can't clone $GCCREPO -> $GCCSRCDIR"
-        fi
-    fi
-    pushd gcc-${GCC_VER_LOCAL}
-    if [ -d .git ] ; then
-        git branch -D windows || echo "Windows branch didn't exist, not a problem."
-        git checkout -b windows
-        git am $NDK/build/tools/toolchain-patches-linaro-4.6-android-and-win32/*.patch
-    fi
-    popd
     popd
 
     TCSRC=$PWD
@@ -448,7 +468,7 @@ function unpackGoogleOrLinuxNDK
 	# On windows, tar unpacks links as text files with the target as the contents.
 	rm -f android-ndk-${NDK_VER}/sources/cxx-stl
 	downloadIfNotExists android-ndk-${NDK_VER}-windows.zip http://dl.google.com/android/ndk/android-ndk-${NDK_VER}-windows.zip
-        unzip -o android-ndk-${NDK_VER}-windows.zip
+        unzip -oq android-ndk-${NDK_VER}-windows.zip
         # Copy across my fixes so that the ndk can run from cmd.exe (tools are added later).
         cp -f $NDK/build/core/build-binary.mk android-ndk-${NDK_VER}/build/core/
         cp -f $NDK/build/core/build-local.mk android-ndk-${NDK_VER}/build/core/
@@ -464,10 +484,10 @@ function unpackGoogleOrLinuxNDK
     else
         if [ "$OSTYPE_MAJOR" = "linux-gnu" ] ; then
             downloadIfNotExists android-ndk-${NDK_VER}-linux-x86.tar.bz2 http://dl.google.com/android/ndk/android-ndk-${NDK_VER}-linux-x86.tar.bz2
-            tar xjvf android-ndk-${NDK_VER}-linux-x86.tar.bz2
+            tar xjf android-ndk-${NDK_VER}-linux-x86.tar.bz2
         else
             downloadIfNotExists android-ndk-${NDK_VER}-darwin-x86.tar.bz2 http://dl.google.com/android/ndk/android-ndk-${NDK_VER}-darwin-x86.tar.bz2
-            tar xjvf android-ndk-${NDK_VER}-darwin-x86.tar.bz2
+            tar xjf android-ndk-${NDK_VER}-darwin-x86.tar.bz2
         fi
     fi
     # Copy across modified ndk build sripts (i.e. scripts to rebuild ndk with).
@@ -514,22 +534,22 @@ function mixPythonWithNDK
     pushd /usr/ndki
     mkdir android-ndk-${NDK_VER}
     pushd android-ndk-${NDK_VER}
-    tar -jxvf $REPO_SRC_PATH/arm-linux-androideabi-${GCC_VER_LOCAL}-${BUILD_NDK}.tar.bz2
-    tar -jxvf $REPO_SRC_PATH/x86-${GCC_VER_LOCAL}-${BUILD_NDK}.tar.bz2
+    tar -jxf $REPO_SRC_PATH/arm-linux-androideabi-${GCC_VER_LOCAL}-${BUILD_NDK}.tar.bz2
+    tar -jxf $REPO_SRC_PATH/x86-${GCC_VER_LOCAL}-${BUILD_NDK}.tar.bz2
 #    if [ "$OSTYPE_MAJOR" = "linux-gnu" ] ; then
-        find $REPO_SRC_PATH -name "gnu-lib*${GCC_VER_LOCAL}.tar.bz2" | while read i ; do tar -xjvf "$i" ; done
+        find $REPO_SRC_PATH -name "gnu-lib*${GCC_VER_LOCAL}.tar.bz2" | while read i ; do tar -xjf "$i" ; done
         mkdir sources/cxx-stl${SRCS_SUFFIX}/stlport
         cp sources/cxx-stl-google/stlport/* sources/cxx-stl${SRCS_SUFFIX}/stlport
         cp -rf sources/cxx-stl-google/stlport/src sources/cxx-stl${SRCS_SUFFIX}/stlport/
         cp -rf sources/cxx-stl-google/stlport/stlport sources/cxx-stl${SRCS_SUFFIX}/stlport/
         cp -rf sources/cxx-stl-google/stlport/test sources/cxx-stl${SRCS_SUFFIX}/stlport/
         cp -rf sources/cxx-stl-google/system sources/cxx-stl${SRCS_SUFFIX}/
-        find $REPO_SRC_PATH -name "stlport*${GCC_VER_LOCAL}.tar.bz2" | while read i ; do tar -xjvf "$i" ; done
+        find $REPO_SRC_PATH -name "stlport*${GCC_VER_LOCAL}.tar.bz2" | while read i ; do tar -xjf "$i" ; done
 #    fi
 
-    tar -jxvf $REPO_SRC_PATH/arm-linux-androideabi-${GCC_VER_LOCAL}-gdbserver.tar.bz2
+    tar -jxf $REPO_SRC_PATH/arm-linux-androideabi-${GCC_VER_LOCAL}-gdbserver.tar.bz2
     if [ -f $REPO_SRC_PATH/x86-${GCC_VER_LOCAL}-gdbserver.tar.bz2 ] ; then
-	tar -jxvf $REPO_SRC_PATH/x86-${GCC_VER_LOCAL}-gdbserver.tar.bz2
+	tar -jxf $REPO_SRC_PATH/x86-${GCC_VER_LOCAL}-gdbserver.tar.bz2
     fi
     # Until x86 gdbserver builds...
     if [ ! "$SRCS_SUFFIX" = "4.4.3" ] ; then
@@ -561,7 +581,7 @@ function mixPythonWithNDK
         fi
         popd
     fi
-    tar -jxvf $REPO_SRC_PATH/ndk-stack*.tar.bz2
+    tar -jxf $REPO_SRC_PATH/ndk-stack*.tar.bz2
 
     popd
     popd
@@ -607,7 +627,7 @@ fi
 if [ "$OSTYPE_MAJOR" = "darwin" ] ; then
     if [ ! -f /usr/local/bin/7za ] ; then
         downloadIfNotExists p7zip-macosx.tar.bz2 http://mingw-and-ndk.googlecode.com/files/p7zip-macosx.tar.bz2
-        tar xjvf p7zip-macosx.tar.bz2
+        tar xjf p7zip-macosx.tar.bz2
         chmod 755 opt/bin/7za
         cp opt/bin/7za /usr/local/bin
     fi

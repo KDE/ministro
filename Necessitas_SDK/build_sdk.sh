@@ -1836,7 +1836,7 @@ pushd $CHECKOUT_BRANCH
 # prepareNecessitasQtWebkit
 
 # if [ "$OSTYPE_MAJOR" != "msys" ] ; then
-#     prepareNecessitasQtMobility # if [[ `gcc --version` =~ .*llvm.* ]]; => syntax error near `=~'
+     prepareNecessitasQtMobility # if [[ `gcc --version` =~ .*llvm.* ]]; => syntax error near `=~'
 # fi
 
 popd
