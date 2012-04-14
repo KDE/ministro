@@ -621,10 +621,10 @@ function prepareNDKs
     # repack mingw android linux-x86 NDK
     if [ ! -f $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.${ANDROID_NDK_MAJOR_VERSION}/data/android-ndk-${ANDROID_NDK_VERSION}-linux-x86.7z ]
     then
-         downloadIfNotExists android-ndk-downloadIfNotExists android-ndk-${ANDROID_NDK_VERSION}-gdb-7.3.50.20110709-binutils-2.22.51-linux-x86.7z http://mingw-and-ndk.googlecode.com/files/android-ndk-${ANDROID_NDK_VERSION}-gdb-7.3.50.20110709-binutils-2.22.51-linux-x86.7z
+        downloadIfNotExists android-ndk-${ANDROID_NDK_VERSION}-gdb-7.4.50.20111216-binutils-2.22.51-linux-x86.7z http://mingw-and-ndk.googlecode.com/files/android-ndk-${ANDROID_NDK_VERSION}-gdb-7.4.50.20111216-binutils-2.22.51-linux-x86.7z
 #       cp $REPO_SRC_PATH/ndk-packages/android-ndk-${ANDROID_NDK_VERSION}-gdb-7.3.50.20110709-binutils-2.22.51-linux-x86.7z .
         rm -fr android-ndk-${ANDROID_NDK_VERSION}
-        7za x android-ndk-${ANDROID_NDK_VERSION}-gdb-7.3.50.20110709-binutils-2.22.51-linux-x86.7z
+        7za x android-ndk-${ANDROID_NDK_VERSION}-gdb-7.4.50.20111216-binutils-2.22.51-linux-x86.7z
         createArchive android-ndk-${ANDROID_NDK_VERSION} android-ndk-${ANDROID_NDK_VERSION}-linux-x86.7z
         mkdir -p $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.${ANDROID_NDK_MAJOR_VERSION}/data
         mv android-ndk-${ANDROID_NDK_VERSION}-linux-x86.7z $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.${ANDROID_NDK_MAJOR_VERSION}/data/android-ndk-${ANDROID_NDK_VERSION}-linux-x86.7z
@@ -663,9 +663,9 @@ function prepareNDKs
             fi
 
             if [ "$OSTYPE_MAJOR" = "linux-gnu" ]; then
-                downloadIfNotExists android-ndk-${ANDROID_NDK_VERSION}-gdb-7.3.50.20110709-binutils-2.22.51-linux-x86.7z http://mingw-and-ndk.googlecode.com/files/android-ndk-${ANDROID_NDK_VERSION}-gdb-7.3.50.20110709-binutils-2.22.51-linux-x86.7z
-#                cp $REPO_SRC_PATH/ndk-packages/android-ndk-${ANDROID_NDK_VERSION}-gdb-7.3.50.20110709-binutils-2.22.51-linux-x86.7z .
-                7za x android-ndk-${ANDROID_NDK_VERSION}-gdb-7.3.50.20110709-binutils-2.22.51-linux-x86.7z
+                downloadIfNotExists android-ndk-${ANDROID_NDK_VERSION}-gdb-7.4.50.20111216-binutils-2.22.51-linux-x86.7z http://mingw-and-ndk.googlecode.com/files/android-ndk-${ANDROID_NDK_VERSION}-gdb-7.4.50.20111216-binutils-2.22.51-linux-x86.7z
+#                cp $REPO_SRC_PATH/ndk-packages/android-ndk-${ANDROID_NDK_VERSION}-gdb-7.4.50.20111216-binutils-2.22.51-linux-x86.7z .
+                7za x android-ndk-${ANDROID_NDK_VERSION}-gdb-7.4.50.20111216-binutils-2.22.51-linux-x86.7z
             fi
         fi
 
@@ -686,26 +686,8 @@ function prepareNDKs
     ANDROID_READELF_BINARY=$ANDROID_NDK_ROOT/toolchains/arm-linux-androideabi-$ANDROID_GCC_VERSION/prebuilt/$HOST_TAG_NDK/bin/arm-linux-androideabi-readelf$EXE_EXT
 }
 
-function prepareGDB
+function makePython
 {
-    package_name_ver=${GDB_VER//./_} # replace . with _
-    if [ -z $GDB_TARG_HOST_TAG ] ; then
-        GDB_PKG_NAME=gdb-android-$GDB_VER-$HOST_TAG
-        GDB_FLDR_NAME=gdb-android-$GDB_VER
-        package_path=$REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.gdb_$package_name_ver/data
-    else
-        GDB_PKG_NAME=gdb_$GDB_TARG_HOST_TAG-$GDB_VER
-        GDB_FLDR_NAME=$GDB_PKG_NAME
-        package_path=$REPO_PATH_PACKAGES/org.kde.necessitas.misc.host_gdb_$package_name_ver/data
-    fi
-    #This function depends on prepareNDKs
-    if [ -f $package_path/$GDB_PKG_NAME.7z ]
-    then
-        return
-    fi
-
-    mkdir gdb-build
-    pushd gdb-build
     pyversion=2.7
     pyfullversion=2.7.1
     install_dir=$PWD/install
@@ -748,14 +730,6 @@ function prepareGDB
     OLDCC=$CC
     OLDCXX=$CXX
     OLDCFLAGS=$CFLAGS
-
-    downloadIfNotExists expat-2.0.1.tar.gz http://downloads.sourceforge.net/sourceforge/expat/expat-2.0.1.tar.gz || error_msg "Can't download expat library"
-    tar xzvf expat-2.0.1.tar.gz
-    pushd expat-2.0.1
-        CC=$CC32 CXX=$CXX32 ./configure --disable-shared --enable-static -prefix=/
-        doMake "Can't compile expat" "all done"
-        make DESTDIR=$install_dir install || error_msg "Can't install expat library"
-    popd
 
     # Again, what a terrible failure.
     unset PYTHONHOME
@@ -849,10 +823,38 @@ function prepareGDB
     fi
     $STRIP $py_target_dir/python/bin/python$pyversion$EXE_EXT
 
-    # Something is setting PYTHONHOME as an Env. Var for Windows and I'm not sure what... installer? NQTC? Python build process?
-    # TODOMA :: Fix the real problem.
     unset PYTHONHOME
     unset PYTHONPATH
+}
+
+function prepareGDB
+{
+    package_name_ver=${GDB_VER//./_} # replace . with _
+    if [ -z $GDB_TARG_HOST_TAG ] ; then
+        GDB_PKG_NAME=gdb-android-$GDB_VER-$HOST_TAG
+        GDB_FLDR_NAME=gdb-android-$GDB_VER
+        package_path=$REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.gdb_$package_name_ver/data
+    else
+        GDB_PKG_NAME=gdb_$GDB_TARG_HOST_TAG-$GDB_VER
+        GDB_FLDR_NAME=$GDB_PKG_NAME
+        package_path=$REPO_PATH_PACKAGES/org.kde.necessitas.misc.host_gdb_$package_name_ver/data
+    fi
+    #This function depends on prepareNDKs
+    if [ -f $package_path/$GDB_PKG_NAME.7z ]
+    then
+        return
+    fi
+
+    mkdir gdb-build
+    pushd gdb-build
+    makePython
+    downloadIfNotExists expat-2.0.1.tar.gz http://downloads.sourceforge.net/sourceforge/expat/expat-2.0.1.tar.gz || error_msg "Can't download expat library"
+    tar xzvf expat-2.0.1.tar.gz
+    pushd expat-2.0.1
+        CC=$CC32 CXX=$CXX32 ./configure --disable-shared --enable-static -prefix=/
+        doMake "Can't compile expat" "all done"
+        make DESTDIR=$install_dir install || error_msg "Can't install expat library"
+    popd
 
     if [ ! -d gdb-src ]
     then
@@ -1829,7 +1831,8 @@ prepareNecessitasQtCreator
 # prepareGDBVersion head
 mkdir $CHECKOUT_BRANCH
 pushd $CHECKOUT_BRANCH
-# prepareNecessitasQt
+prepareNecessitasQt
+
 # TODO :: Fix webkit build in Windows (-no-video fails) and Mac OS X (debug-and-release config incorrectly used and fails)
 # git clone often fails for webkit
 # Webkit is broken currently.
