@@ -1,7 +1,7 @@
 OSTYPE_MAJOR=${OSTYPE//[0-9.]/}
 NDK_VER=r6b
 GCC_VER=4.6.3
-GCC_VER_LINARO=4.6-2011.12
+GCC_VER_LINARO=4.6-2012.03
 
 # Refers to the gdb branches and folder structure on
 # git://gitorious.org/toolchain-mingw-android/mingw-android-toolchain-gdb.git
