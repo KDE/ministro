@@ -62,7 +62,7 @@ import android.os.IBinder;
 public class MinistroActivity extends Activity {
 
     public native static int nativeChmode(String filepath, int mode);
-    private static final String DOMAIN_NAME="http://ministro.licentia.eu/ministro/";
+    private static final String DOMAIN_NAME="http://files.kde.org/necessitas/ministro/";
 
     private String[] m_modules;
     private int m_id=-1;
@@ -80,12 +80,14 @@ public class MinistroActivity extends Activity {
                         " needs extra libraries to run.\nDo you want to download them now?")
                     .setCancelable(false)
                     .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                        @Override
                         public void onClick(DialogInterface dialog, int id) {
                             dialog.dismiss();
                             new CheckLibraries().execute(false);
                         }
                     })
                     .setNegativeButton("No", new DialogInterface.OnClickListener() {
+                        @Override
                         public void onClick(DialogInterface dialog, int id) {
                                 dialog.cancel();
                                 finishMe();
@@ -135,6 +137,8 @@ public class MinistroActivity extends Activity {
             Document dom = null;
             Element root = null;
             URLConnection connection = getVersionUrl(c).openConnection();
+            connection.setConnectTimeout(10000);
+            connection.setReadTimeout(10000);
             dom = builder.parse(connection.getInputStream());
             root = dom.getDocumentElement();
             root.normalize();
@@ -146,7 +150,6 @@ public class MinistroActivity extends Activity {
                 return version;
 
             connection = getLibsXmlUrl(c, version).openConnection();
-            connection.setRequestProperty("Accept-Encoding", "gzip,deflate");
             File file= new File(MinistroService.instance().getVersionXmlFile());
             file.delete();
             FileOutputStream outstream = new FileOutputStream(MinistroService.instance().getVersionXmlFile());
@@ -332,7 +335,7 @@ public class MinistroActivity extends Activity {
     private class CheckLibraries extends AsyncTask<Boolean, Void, Double> {
 
         private ProgressDialog dialog = null;
-        private ArrayList<Library> newLibs = new ArrayList<Library>();
+        private final ArrayList<Library> newLibs = new ArrayList<Library>();
         private String m_message;
         @Override
         protected void onPreExecute() {
@@ -360,7 +363,7 @@ public class MinistroActivity extends Activity {
                 {
                     if (oldVersion!=version)
                         libraries = MinistroService.instance().getDownloadedLibraries();
-                    else 
+                    else
                         return version;
                 }
                 else
