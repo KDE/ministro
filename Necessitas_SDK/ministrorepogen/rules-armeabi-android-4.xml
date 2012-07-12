@@ -101,8 +101,7 @@
                 <lib name="QtVersit"/>
             </depends>
         </lib>
-        <lib file="plugins/contacts/libqtcontacts_android.so" name="QtAndroidContactsPlugin" platform="5" level="9999" />
-        <lib file="plugins/contacts/libqtcontacts_android.so" name="QtAndroidContactsPlugin" platform="8" level="9999" />
+        <lib file="plugins/contacts/libqtcontacts_android.so" name="QtAndroidContactsPlugin" level="9999" />
 
 
         <lib file="lib/libQtFeedback.so">
@@ -114,8 +113,7 @@
                 <lib name="QtAndroidFeedbackPlugin"/>
             </depends>
         </lib>
-        <lib file="plugins/feedback/libqtfeedback_android.so" name="QtAndroidFeedbackPlugin" platform="5" level="9999" />
-        <lib file="plugins/feedback/libqtfeedback_android.so" name="QtAndroidFeedbackPlugin" platform="8" level="9999" />
+        <lib file="plugins/feedback/libqtfeedback_android.so" name="QtAndroidFeedbackPlugin" level="9999" />
 
 
         <lib file="lib/libQtVersit.so">
@@ -135,8 +133,7 @@
                 <lib name="QtAndroidSensorsPlugin"/>
             </depends>
         </lib>
-        <lib file="plugins/sensors/libqtsensors_android.so" name="QtAndroidSensorsPlugin" platform="5" level="9999" />
-        <lib file="plugins/sensors/libqtsensors_android.so" name="QtAndroidSensorsPlugin" platform="8" level="9999" />
+        <lib file="plugins/sensors/libqtsensors_android.so" name="QtAndroidSensorsPlugin" level="9999" />
 
 
         <lib file="lib/libQtOrganizer.so">
@@ -182,7 +179,7 @@
                 <lib name="QtAndroidMKCameraPlugin"/>
             </depends>
         </lib>
-        <lib file="plugins/mediaservice/libqtmultimediakit_androidmedia.so" name="QtAndroidMKMediaPlugin" platform="8" level="9999" />
-        <lib file="plugins/mediaservice/libqtmultimediakit_androidcam.so" name="QtAndroidMKCameraPlugin" platform="8" level="9999" />
+        <lib file="plugins/mediaservice/libqtmultimediakit_androidmedia.so" name="QtAndroidMKMediaPlugin" level="9999" />
+        <lib file="plugins/mediaservice/libqtmultimediakit_androidcam.so" name="QtAndroidMKCameraPlugin" level="9999" />
     </libs>
 </root>

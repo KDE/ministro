@@ -14,4 +14,7 @@ function removeUnusedPackages
 
     # OpenJDK needs to be handled into QtCeator
     rm -fr $TEMP_PATH/out/necessitas/sdk_src/org.kde.necessitas.misc.openjdk
+
+    # Webkit for alpha4 is coming with qt framework
+    rm -fr $TEMP_PATH/out/necessitas/sdk_src/org.kde.necessitas.android.qtwebkit*
 }

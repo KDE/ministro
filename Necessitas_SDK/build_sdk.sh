@@ -331,7 +331,7 @@ function prepareSdkInstallerTools
     SDK_TOOLS_PATH=$PWD/necessitas-installer-framework/installerbuilder/bin
     if [ ! -d necessitas-installer-framework ]
     then
-        git clone git://gitorious.org/~taipan/qt-labs/necessitas-installer-framework.git necessitas-installer-framework || error_msg "Can't clone necessitas-installer-framework"
+        git clone git://anongit.kde.org/necessitas-installer-framework.git necessitas-installer-framework || error_msg "Can't clone necessitas-installer-framework"
     fi
 
     pushd necessitas-installer-framework/installerbuilder
@@ -547,39 +547,42 @@ function makeInstallMinGWLibs
 function prepareNDKs
 {
     # repack official windows NDK
-    if [ ! -f $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.${ANDROID_NDK_MAJOR_VERSION}/data/android-ndk-${ANDROID_NDK_VERSION}-windows.7z ]
+    if [ ! -f $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.official/data/android-ndk-${ANDROID_NDK_VERSION}-windows.7z ]
     then
         downloadIfNotExists android-ndk-${ANDROID_NDK_VERSION}-windows.zip http://dl.google.com/android/ndk/android-ndk-${ANDROID_NDK_VERSION}-windows.zip
         rm -fr android-ndk-${ANDROID_NDK_VERSION}
         unzip android-ndk-${ANDROID_NDK_VERSION}-windows.zip
-        createArchive android-ndk-${ANDROID_NDK_VERSION} android-ndk-${ANDROID_NDK_VERSION}-windows.7z
-        mkdir -p $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.${ANDROID_NDK_MAJOR_VERSION}/data
-        mv android-ndk-${ANDROID_NDK_VERSION}-windows.7z $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.${ANDROID_NDK_MAJOR_VERSION}/data/android-ndk-${ANDROID_NDK_VERSION}-windows.7z
-        rm -fr android-ndk-${ANDROID_NDK_VERSION}
+        mv android-ndk-${ANDROID_NDK_VERSION} android-ndk
+        createArchive android-ndk android-ndk-${ANDROID_NDK_VERSION}-windows.7z
+        mkdir -p $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.official/data
+        mv android-ndk-${ANDROID_NDK_VERSION}-windows.7z $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.official/data/android-ndk-${ANDROID_NDK_VERSION}-windows.7z
+        rm -fr android-ndk
     fi
 
     # repack official mac NDK
-    if [ ! -f $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.${ANDROID_NDK_MAJOR_VERSION}/data/android-ndk-${ANDROID_NDK_VERSION}-darwin-x86.7z ]
+    if [ ! -f $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.official/data/android-ndk-${ANDROID_NDK_VERSION}-darwin-x86.7z ]
     then
         downloadIfNotExists android-ndk-${ANDROID_NDK_VERSION}-darwin-x86.tar.bz2 http://dl.google.com/android/ndk/android-ndk-${ANDROID_NDK_VERSION}-darwin-x86.tar.bz2
         rm -fr android-ndk-${ANDROID_NDK_VERSION}
         tar xjvf android-ndk-${ANDROID_NDK_VERSION}-darwin-x86.tar.bz2
-        createArchive android-ndk-${ANDROID_NDK_VERSION} android-ndk-${ANDROID_NDK_VERSION}-darwin-x86.7z
-        mkdir -p $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.${ANDROID_NDK_MAJOR_VERSION}/data
-        mv android-ndk-${ANDROID_NDK_VERSION}-darwin-x86.7z $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.${ANDROID_NDK_MAJOR_VERSION}/data/android-ndk-${ANDROID_NDK_VERSION}-darwin-x86.7z
-        rm -fr android-ndk-${ANDROID_NDK_VERSION}
+        mv android-ndk-${ANDROID_NDK_VERSION} android-ndk
+        createArchive android-ndk android-ndk-${ANDROID_NDK_VERSION}-darwin-x86.7z
+        mkdir -p $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.official/data
+        mv android-ndk-${ANDROID_NDK_VERSION}-darwin-x86.7z $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.official/data/android-ndk-${ANDROID_NDK_VERSION}-darwin-x86.7z
+        rm -fr android-ndk
     fi
 
     # repack official linux-x86 NDK
-    if [ ! -f $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.${ANDROID_NDK_MAJOR_VERSION}/data/android-ndk-${ANDROID_NDK_VERSION}-linux-x86.7z ]
+    if [ ! -f $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.official/data/android-ndk-${ANDROID_NDK_VERSION}-linux-x86.7z ]
     then
         downloadIfNotExists android-ndk-${ANDROID_NDK_VERSION}-linux-x86.tar.bz2 http://dl.google.com/android/ndk/android-ndk-${ANDROID_NDK_VERSION}-linux-x86.tar.bz2
         rm -fr android-ndk-${ANDROID_NDK_VERSION}
         tar xjvf android-ndk-${ANDROID_NDK_VERSION}-linux-x86.tar.bz2
-        createArchive android-ndk-${ANDROID_NDK_VERSION} android-ndk-${ANDROID_NDK_VERSION}-linux-x86.7z
-        mkdir -p $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.${ANDROID_NDK_MAJOR_VERSION}/data
-        mv android-ndk-${ANDROID_NDK_VERSION}-linux-x86.7z $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.${ANDROID_NDK_MAJOR_VERSION}/data/android-ndk-${ANDROID_NDK_VERSION}-linux-x86.7z
-        rm -fr android-ndk-${ANDROID_NDK_VERSION}
+        mv android-ndk-${ANDROID_NDK_VERSION} android-ndk
+        createArchive android-ndk android-ndk-${ANDROID_NDK_VERSION}-linux-x86.7z
+        mkdir -p $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.official/data
+        mv android-ndk-${ANDROID_NDK_VERSION}-linux-x86.7z $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.official/data/android-ndk-${ANDROID_NDK_VERSION}-linux-x86.7z
+        rm -fr android-ndk
     fi
 
 # TODO Ray should uncomment/review it when Linaro toolchain is ready
@@ -589,8 +592,8 @@ function prepareNDKs
 #         rm -fr android-ndk-${ANDROID_NDK_VERSION}
 #         tar xjvf android-ndk-${ANDROID_NDK_VERSION}-linux-x86.tar.bz2
 #         $SDK_TOOLS_PATH/archivegen android-ndk-${ANDROID_NDK_VERSION} android-ndk-${ANDROID_NDK_VERSION}-linux-x86.7z
-#         mkdir -p $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.${ANDROID_NDK_MAJOR_VERSION}/data
-#         mv android-ndk-${ANDROID_NDK_VERSION}-linux-x86.7z $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.${ANDROID_NDK_MAJOR_VERSION}/data/android-ndk-${ANDROID_NDK_VERSION}-linux-x86.7z
+#         mkdir -p $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.official/data
+#         mv android-ndk-${ANDROID_NDK_VERSION}-linux-x86.7z $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.official/data/android-ndk-${ANDROID_NDK_VERSION}-linux-x86.7z
 #         rm -fr android-ndk-${ANDROID_NDK_VERSION}
 #     fi
 #
@@ -646,8 +649,8 @@ function prepareNDKs
 #         export ANDROID_NDK_ROOT=$PWD/android-ndk-${ANDROID_NDK_VERSION}-git
 #         export ANDROID_NDK_FOLDER_NAME=android-ndk-${ANDROID_NDK_VERSION}-git
 #     else
-        export ANDROID_NDK_ROOT=$PWD/android-ndk-${ANDROID_NDK_VERSION}
-        export ANDROID_NDK_FOLDER_NAME=android-ndk-${ANDROID_NDK_VERSION}
+        export ANDROID_NDK_ROOT=$PWD/android-ndk
+        export ANDROID_NDK_FOLDER_NAME=android-ndk
 #     fi
 
     if [ ! -d $ANDROID_NDK_FOLDER_NAME ]; then
@@ -698,6 +701,7 @@ function prepareNDKs
             createArchive android-ndk-${ANDROID_NDK_VERSION}-git $REPO_PATH_PACKAGES/org.kde.necessitas.misc.ndk.${ANDROID_NDK_VERSION}_git/data/android-ndk-${ANDROID_NDK_VERSION}-git-${HOST_TAG_NDK}.7z
         fi
     fi
+    mv android-ndk-${ANDROID_NDK_VERSION} android-ndk
 
     ANDROID_STRIP_BINARY=$ANDROID_NDK_ROOT/toolchains/arm-linux-androideabi-4.4.3/prebuilt/$HOST_TAG_NDK/bin/arm-linux-androideabi-strip$EXE_EXT
     ANDROID_READELF_BINARY=$ANDROID_NDK_ROOT/toolchains/arm-linux-androideabi-4.4.3/prebuilt/$HOST_TAG_NDK/bin/arm-linux-androideabi-readelf$EXE_EXT
@@ -1041,45 +1045,30 @@ function repackSDKPlatform-tools
     fi
 }
 
+function repackSDKtools
+{
+    package_name=${5//-/_} # replace - with _
+    if [ ! -f $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.$package_name/data/$2.7z ]
+    then
+        downloadIfNotExists $1.zip http://dl.google.com/android/repository/$1.zip
+        rm -fr android-sdk
+        unzip $1.zip
+        mkdir -p $3
+        mv $4 $3/$4
+        createArchive $3 $2.7z
+        mkdir -p $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.$package_name/data
+        mv $2.7z $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.$package_name/data/$2.7z
+        rm -fr $3
+    fi
+}
+
 
 function prepareSDKs
 {
     echo "prepare SDKs"
-    if [ ! -f $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.base/data/android-sdk-linux.7z ]
-    then
-        rm -fr android-sdk
-        downloadIfNotExists android-sdk_${ANDROID_SDK_VERSION}-linux.tgz http://dl.google.com/android/android-sdk_${ANDROID_SDK_VERSION}-linux.tgz
-        tar -xzvf android-sdk_${ANDROID_SDK_VERSION}-linux.tgz
-        mv android-sdk-linux android-sdk
-        createArchive android-sdk android-sdk_${ANDROID_SDK_VERSION}-linux.7z
-        mkdir -p $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.base/data
-        mv android-sdk_${ANDROID_SDK_VERSION}-linux.7z $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.base/data/android-sdk-linux.7z
-        rm -fr android-sdk
-    fi
-
-    if [ ! -f $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.base/data/android-sdk-macosx.7z ]
-    then
-        rm -fr android-sdk
-        downloadIfNotExists android-sdk_${ANDROID_SDK_VERSION}-macosx.zip http://dl.google.com/android/android-sdk_${ANDROID_SDK_VERSION}-macosx.zip
-        unzip android-sdk_${ANDROID_SDK_VERSION}-macosx.zip
-        mv android-sdk-macosx android-sdk
-        createArchive android-sdk android-sdk_${ANDROID_SDK_VERSION}-macosx.7z
-        mkdir -p $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.base/data
-        mv android-sdk_${ANDROID_SDK_VERSION}-macosx.7z $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.base/data/android-sdk-macosx.7z
-        rm -fr android-sdk
-    fi
-
-    if [ ! -f $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.base/data/android-sdk-windows.7z ]
-    then
-        rm -fr android-sdk
-        downloadIfNotExists android-sdk_${ANDROID_SDK_VERSION}-windows.zip http://dl.google.com/android/android-sdk_${ANDROID_SDK_VERSION}-windows.zip
-        unzip android-sdk_${ANDROID_SDK_VERSION}-windows.zip
-        mv android-sdk-windows android-sdk
-        createArchive android-sdk android-sdk_${ANDROID_SDK_VERSION}-windows.7z
-        mkdir -p $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.base/data
-        mv android-sdk_${ANDROID_SDK_VERSION}-windows.7z $REPO_PATH_PACKAGES/org.kde.necessitas.misc.sdk.base/data/android-sdk-windows.7z
-        rm -fr android-sdk
-    fi
+    repackSDKtools tools_${ANDROID_SDK_VERSION}-linux android-sdk-linux android-sdk tools base
+    repackSDKtools tools_${ANDROID_SDK_VERSION}-macosx android-sdk-macosx android-sdk tools base
+    repackSDKtools tools_${ANDROID_SDK_VERSION}-windows android-sdk-windows android-sdk tools base
 
     if [ "$OSTYPE" = "msys" ]
     then
@@ -1140,6 +1129,12 @@ function prepareSDKs
 
     # repack api-14
     repackSDK android-${ANDROID_API_14_VERSION} android-${ANDROID_API_14_VERSION} android-sdk/platforms android-14
+
+    # repack api-15
+    repackSDK android-${ANDROID_API_15_VERSION} android-${ANDROID_API_15_VERSION} android-sdk/platforms android-15
+
+    # repack api-16
+    repackSDK android-${ANDROID_API_16_VERSION} android-${ANDROID_API_16_VERSION} android-sdk/platforms android-16
 }
 
 function patchQtFiles
@@ -1229,9 +1224,6 @@ function compileNecessitasQt #params $1 architecture, $2 package path, $3 NDK_TA
     then
          pushd ../qt-src
          git checkout -f mkspecs
-         mkdir -p $NQT_INSTALL_DIR/src/android/cpp/
-         # The examples need qtmain_android.cpp in the install dir.
-         cp src/android/cpp/qtmain_android.cpp $NQT_INSTALL_DIR/src/android/cpp/
          popd
         ../qt-src/android/androidconfigbuild.sh -l $NDK_TARGET -c 1 -q 1 -n $TEMP_PATH/android-ndk-${ANDROID_NDK_VERSION} -a $ANDROID_ARCH -k 0 -i $NQT_INSTALL_DIR || error_msg "Can't configure android-qt"
         echo "all done">all_done
@@ -1239,23 +1231,9 @@ function compileNecessitasQt #params $1 architecture, $2 package path, $3 NDK_TA
 
     rm -fr install
     rm -fr Android
-    export INSTALL_ROOT=""
+    unset INSTALL_ROOT
     make QtJar
     ../qt-src/android/androidconfigbuild.sh -l $NDK_TARGET -c 0 -q 0 -n $TEMP_PATH/android-ndk-${ANDROID_NDK_VERSION} -a $ANDROID_ARCH -b 0 -k 1 -i $NQT_INSTALL_DIR || error_msg "Can't install android-qt"
-
-    doSed $"s/= android-5/= android-${NDK_TARGET}/g" install/mkspecs/android-g++/qmake.conf
-    doSed $"s/= android-5/= android-${NDK_TARGET}/g" install/mkspecs/default/qmake.conf
-    if [ $ANDROID_ARCH = "armeabi-v7a" ]
-    then
-        doSed $"s/= armeabi/= armeabi-v7a/g" install/mkspecs/android-g++/qmake.conf
-        doSed $"s/= armeabi/= armeabi-v7a/g" install/mkspecs/default/qmake.conf
-    else
-        if [ $ANDROID_ARCH = "x86" ]
-        then
-            doSed $"s/= armeabi/= x86/g" install/mkspecs/android-g++/qmake.conf
-            doSed $"s/= armeabi/= x86/g" install/mkspecs/default/qmake.conf
-        fi
-    fi
 
     mkdir -p $2/$1
     cp -rf $NQT_INSTALL_DIR/bin $2/$1
@@ -1267,11 +1245,29 @@ function compileNecessitasQt #params $1 architecture, $2 package path, $3 NDK_TA
     cp -rf ../qt-src/lib/*.xml $2/$1/lib/
     cp -rf jar $2/$1/
     rm -fr $2/$1/bin
+
+    doSed $"s/= android-5/= android-${NDK_TARGET}/g" $2/$1/mkspecs/android-g++/qmake.conf
+    doSed $"s/= android-5/= android-${NDK_TARGET}/g" $2/$1/mkspecs/default/qmake.conf
+    doSed $"s/# QMAKE_STRIP/QMAKE_STRIP/g" $2/$1/mkspecs/android-g++/qmake.conf
+    doSed $"s/# QMAKE_STRIP/QMAKE_STRIP/g" $2/$1/mkspecs/default/qmake.conf
+    if [ $ANDROID_ARCH = "armeabi-v7a" ]
+    then
+        doSed $"s/= armeabi/= armeabi-v7a/g" $2/$1/mkspecs/android-g++/qmake.conf
+        doSed $"s/= armeabi/= armeabi-v7a/g" $2/$1/mkspecs/default/qmake.conf
+    else
+        if [ $ANDROID_ARCH = "x86" ]
+        then
+            doSed $"s/= armeabi/= x86/g" $2/$1/mkspecs/android-g++/qmake.conf
+            doSed $"s/= armeabi/= x86/g" $2/$1/mkspecs/default/qmake.conf
+        fi
+    fi
+
     createArchive Android qt-framework.7z
     mv qt-framework.7z $REPO_PATH_PACKAGES/org.kde.necessitas.android.qt.$package_name/data/qt-framework.7z
-    rm -fr ../install-$1
-    cp -a install ../install-$1
-    cp -rf jar ../install-$1/
+#    rm -fr ../install-$1
+    mkdir -p ../install-$1
+    cp -a install/* ../install-$1/
+    cp -a jar ../install-$1/
     packforWindows $REPO_PATH_PACKAGES/org.kde.necessitas.android.qt.$package_name/data/ qt-framework
 #    patchQtFiles
 }
@@ -1309,7 +1305,7 @@ function prepareNecessitasQt
         mkdir build-armeabi-android-4
         pushd build-armeabi-android-4
         compileNecessitasQt armeabi-android-4 Android/Qt/$NECESSITAS_QT_VERSION_SHORT 4 armeabi
-        popd #build-armeabi
+        popd #build-armeabi_android_4
     fi
 # Enable it when QtCreator is ready
 #     if [ ! -f $REPO_PATH_PACKAGES/org.kde.necessitas.android.qt.x86/data/qt-tools-${HOST_TAG}.7z ]
@@ -1336,13 +1332,13 @@ function compileNecessitasQtMobility
         git checkout $CHECKOUT_BRANCH
         git pull
         popd
-        ../qtmobility-src/configure -prefix $PWD/install -staticconfig android -qmake-exec $TEMP_PATH/$CHECKOUT_BRANCH/Android/Qt/$NECESSITAS_QT_VERSION_SHORT/build-$1/install/bin/qmake$EXE_EXT -modules "bearer location contacts multimedia versit messaging systeminfo serviceframework sensors gallery organizer feedback connectivity" || error_msg "Can't configure android-qtmobility"
+        ../qtmobility-src/configure -prefix $PWD/install -staticconfig android -qmake-exec $TEMP_PATH/$CHECKOUT_BRANCH/Android/Qt/$NECESSITAS_QT_VERSION_SHORT/build-$1/install/bin/qmake$EXE_EXT -modules "bearer location contacts versit messaging systeminfo serviceframework sensors gallery organizer feedback connectivity" || error_msg "Can't configure android-qtmobility"
         doMake "Can't compile android-qtmobility" "all done" ma-make
     fi
     package_name=${1//-/_} # replace - with _
     rm -fr data
     rm -fr $2
-    export INSTALL_ROOT=""
+    unset INSTALL_ROOT
     make install
     mkdir -p $2/$1
     mkdir -p $REPO_PATH_PACKAGES/org.kde.necessitas.android.qtmobility.$package_name/data
@@ -1638,6 +1634,8 @@ function setPackagesVariables
     patchPackage "@@ANDROID_API_12_VERSION@@" $ANDROID_API_12_VERSION "org.kde.necessitas.misc.sdk.android_12"
     patchPackage "@@ANDROID_API_13_VERSION@@" $ANDROID_API_13_VERSION "org.kde.necessitas.misc.sdk.android_13"
     patchPackage "@@ANDROID_API_14_VERSION@@" $ANDROID_API_14_VERSION "org.kde.necessitas.misc.sdk.android_14"
+    patchPackage "@@ANDROID_API_15_VERSION@@" $ANDROID_API_15_VERSION "org.kde.necessitas.misc.sdk.android_15"
+    patchPackage "@@ANDROID_API_16_VERSION@@" $ANDROID_API_16_VERSION "org.kde.necessitas.misc.sdk.android_16"
     patchPackage "@@ANDROID_PLATFORM_TOOLS_VERSION@@" $ANDROID_PLATFORM_TOOLS_VERSION "org.kde.necessitas.misc.sdk.platform_tools"
     patchPackage "@@ANDROID_SDK_VERSION@@" $ANDROID_SDK_VERSION "org.kde.necessitas.misc.sdk.base"
 
@@ -1724,7 +1722,7 @@ function prepareMinistroRepository
             qmldirfileDirname=`dirname $qmldirfile`
             cp $qmldirfile $MINISTRO_OBJECTS_PATH/$qmldirfileDirname/
         done
-        $REPO_SRC_PATH/ministrorepogen/ministrorepogen$EXE_EXT $ANDROID_READELF_BINARY $MINISTRO_OBJECTS_PATH $MINISTRO_VERSION $architecture $REPO_SRC_PATH/ministrorepogen/rules-$platfromArchitecture.xml $MINISTRO_REPO_PATH/$CHECKOUT_BRANCH $repoVersion
+        $REPO_SRC_PATH/ministrorepogen/ministrorepogen$EXE_EXT $ANDROID_READELF_BINARY $MINISTRO_OBJECTS_PATH $MINISTRO_VERSION $architecture $REPO_SRC_PATH/ministrorepogen/rules-$platfromArchitecture.xml $MINISTRO_REPO_PATH/$CHECKOUT_BRANCH $repoVersion $MINISTRO_QT_VERSION
         popd
     done
 }
@@ -1819,7 +1817,7 @@ prepareNecessitasQt
 # TODO :: Fix webkit build in Windows (-no-video fails) and Mac OS X (debug-and-release config incorrectly used and fails)
 # git clone often fails for webkit
 # Webkit is broken currently.
-prepareNecessitasQtWebkit
+#prepareNecessitasQtWebkit
 
 if [ "$OSTYPE" != "msys" ] ; then
     prepareNecessitasQtMobility # if [[ `gcc --version` =~ .*llvm.* ]]; => syntax error near `=~'
@@ -1842,6 +1840,6 @@ fi
 removeUnusedPackages
 
 prepareSDKRepository
-prepareMinistroRepository
+#prepareMinistroRepository
 
 popd
