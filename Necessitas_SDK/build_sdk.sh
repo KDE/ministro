@@ -368,6 +368,7 @@ function prepareNecessitasQtCreator
             git checkout unstable
             git pull
             export UPDATEINFO_DISABLE=false
+            # DEFINES+=IDE_SETTINGSVARIANT=Necessitas
             $SHARED_QT_PATH/bin/qmake $HOST_QT_CFG $HOST_QM_CFG_OPTIONS -r || error_msg "Can't configure android-qt-creator"
             doMake "Can't compile $QTC_PATH" "all done" ma-make
         fi
@@ -1619,8 +1620,8 @@ function setPackagesVariables
 
     patchPackage "@@NECESSITAS_QT_CREATOR_VERSION@@" $NECESSITAS_QT_CREATOR_VERSION "org.kde.necessitas.tools.qtcreator"
 
-    patchPackage "@@ANDROID_NDK_VERSION@@" $ANDROID_NDK_VERSION "org.kde.necessitas.misc.ndk.r6"
-    patchPackage "@@ANDROID_NDK_MAJOR_VERSION@@" $ANDROID_NDK_MAJOR_VERSION "org.kde.necessitas.misc.ndk.r6"
+    patchPackage "@@ANDROID_NDK_VERSION@@" $ANDROID_NDK_VERSION "org.kde.necessitas.misc.ndk.official"
+    patchPackage "@@ANDROID_NDK_MAJOR_VERSION@@" $ANDROID_NDK_MAJOR_VERSION "org.kde.necessitas.misc.ndk.official"
     patchPackage "@@ANDROID_NDK_MAJOR_VERSION@@" $ANDROID_NDK_MAJOR_VERSION "org.kde.necessitas.misc.ndk.ma_r6"
 
     patchPackage "@@ANDROID_API_4_VERSION@@" $ANDROID_API_4_VERSION "org.kde.necessitas.misc.sdk.android_4"
@@ -1840,6 +1841,6 @@ fi
 removeUnusedPackages
 
 prepareSDKRepository
-#prepareMinistroRepository
+prepareMinistroRepository
 
 popd

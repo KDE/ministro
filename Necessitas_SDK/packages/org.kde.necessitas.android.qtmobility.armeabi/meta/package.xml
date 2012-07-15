@@ -5,7 +5,7 @@
     <Version>@@NECESSITAS_QTMOBILITY_VERSION@@</Version>
     <ReleaseDate>@@TODAY@@</ReleaseDate>
     <Name>org.kde.necessitas.android.qtmobility.armeabi</Name>
-    <Dependencies>org.kde.necessitas.android.qt.armeabi,org.kde.necessitas.android.qtwebkit.armeabi</Dependencies>
+    <Dependencies>org.kde.necessitas.android.qt.armeabi</Dependencies>
     <Script>installscript.qs</Script>
     <Default>true</Default>
     <InstallPriority>0</InstallPriority>
