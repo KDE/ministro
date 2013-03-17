@@ -1,0 +1,6 @@
+bin
+libs
+obj
+gen
+.*
+project.properties

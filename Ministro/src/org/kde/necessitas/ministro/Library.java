@@ -13,7 +13,7 @@
 
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ */
 
 package org.kde.necessitas.ministro;
 
@@ -21,7 +21,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -30,8 +29,8 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+import android.annotation.SuppressLint;
 import android.os.Bundle;
-
 
 class Library
 {
@@ -40,23 +39,34 @@ class Library
     public String[] depends = null;
     public String[] replaces = null;
     public NeedsStruct[] needs = null;
-    public int level=0;
+    public int level = 0;
     public long size = 0;
+    public boolean touched = false;
+
+    class LibraryVersion
+    {
+        public int major = 0;
+        public int minor = 0;
+        public int patch = 0;
+    }
+
+    public LibraryVersion version;
     public String sha1 = null;
     public String url;
+    public Integer sourceId;
 
     public static String[] getLibNames(Element libNode)
     {
         if (libNode == null)
             return null;
-        NodeList list=libNode.getElementsByTagName("lib");
+        NodeList list = libNode.getElementsByTagName("lib");
         ArrayList<String> libs = new ArrayList<String>();
-        for (int i=0;i<list.getLength();i++)
+        for (int i = 0; i < list.getLength(); i++)
         {
             if (list.item(i).getNodeType() != Node.ELEMENT_NODE)
                 continue;
-            Element lib=(Element)list.item(i);
-            if (lib!=null)
+            Element lib = (Element) list.item(i);
+            if (lib != null)
                 libs.add(lib.getAttribute("name"));
         }
         String[] strings = new String[libs.size()];
@@ -67,24 +77,34 @@ class Library
     {
         if (libNode == null)
             return null;
-        NodeList list=libNode.getElementsByTagName("item");
+        NodeList list = libNode.getElementsByTagName("item");
         ArrayList<NeedsStruct> needs = new ArrayList<NeedsStruct>();
 
-        for (int i=0;i<list.getLength();i++)
+        for (int i = 0; i < list.getLength(); i++)
         {
             if (list.item(i).getNodeType() != Node.ELEMENT_NODE)
                 continue;
-            Element lib=(Element)list.item(i);
-            if (lib!=null)
+            Element lib = (Element) list.item(i);
+            if (lib != null)
             {
-                NeedsStruct need=new NeedsStruct();
-                need.name=lib.getAttribute("name");
-                need.filePath=lib.getAttribute("file");
-                need.url=lib.getAttribute("url");
-                need.sha1=lib.getAttribute("sha1");
-                need.size=Long.valueOf(lib.getAttribute("size"));
-                if ( lib.hasAttribute("type") )
-                    need.type=lib.getAttribute("type");
+                NeedsStruct need = new NeedsStruct();
+                try
+                {
+                    need.filePath = new File(lib.getAttribute("file")).getCanonicalPath();
+                }
+                catch (Exception e)
+                {
+                    e.printStackTrace();
+                    // Bad dog, it seems that somebody want's to do funny things
+                    // with the file name !!!
+                    continue;
+                }
+                need.name = lib.getAttribute("name");
+                need.url = lib.getAttribute("url");
+                need.sha1 = lib.getAttribute("sha1");
+                need.size = Long.valueOf(lib.getAttribute("size"));
+                if (lib.hasAttribute("type"))
+                    need.type = lib.getAttribute("type");
                 needs.add(need);
             }
         }
@@ -92,52 +112,59 @@ class Library
         return needs.toArray(_needs);
     }
 
-    public static  Library getLibrary(Element libNode, boolean includeNeed)
+    @SuppressLint("DefaultLocale")
+    public static Library getLibrary(Element libNode, boolean includeNeed) throws IOException
     {
-        Library lib= new Library();
-        lib.name=libNode.getAttribute("name");
-        lib.sha1=libNode.getAttribute("sha1").toUpperCase();
-        lib.filePath=libNode.getAttribute("file");
-        lib.url=libNode.getAttribute("url");
+        Library lib = new Library();
+        // The following line may trow an exception if the file name is not good
+        // !
+        lib.filePath = new File(libNode.getAttribute("file")).getCanonicalPath();
+        lib.name = libNode.getAttribute("name");
+        lib.sha1 = libNode.getAttribute("sha1").toUpperCase();
+        lib.url = libNode.getAttribute("url");
         try
         {
-            lib.level=Integer.parseInt(libNode.getAttribute("level"));
-        } catch (Exception e) {
+            lib.level = Integer.parseInt(libNode.getAttribute("level"));
+        }
+        catch (Exception e)
+        {
             e.printStackTrace();
         }
 
         try
         {
-            lib.size=Long.parseLong(libNode.getAttribute("size"));
-        } catch (Exception e) {
+            lib.size = Long.parseLong(libNode.getAttribute("size"));
+        }
+        catch (Exception e)
+        {
             e.printStackTrace();
         }
-        NodeList list=libNode.getElementsByTagName("depends");
-        for (int i=0;i<list.getLength();i++)
+        NodeList list = libNode.getElementsByTagName("depends");
+        for (int i = 0; i < list.getLength(); i++)
         {
             if (list.item(i).getNodeType() != Node.ELEMENT_NODE)
                 continue;
-            lib.depends=getLibNames((Element) list.item(i));
+            lib.depends = getLibNames((Element) list.item(i));
             break;
         }
-        list=libNode.getElementsByTagName("replaces");
-        for (int i=0;i<list.getLength();i++)
+        list = libNode.getElementsByTagName("replaces");
+        for (int i = 0; i < list.getLength(); i++)
         {
             if (list.item(i).getNodeType() != Node.ELEMENT_NODE)
                 continue;
-            lib.replaces=getLibNames((Element) list.item(i));
+            lib.replaces = getLibNames((Element) list.item(i));
             break;
         }
 
         if (!includeNeed) // don't waste time.
             return lib;
 
-        list=libNode.getElementsByTagName("needs");
-        for (int i=0;i<list.getLength();i++)
+        list = libNode.getElementsByTagName("needs");
+        for (int i = 0; i < list.getLength(); i++)
         {
             if (list.item(i).getNodeType() != Node.ELEMENT_NODE)
                 continue;
-            lib.needs=getNeeds((Element) list.item(i));
+            lib.needs = getNeeds((Element) list.item(i));
             break;
         }
         return lib;
@@ -157,12 +184,12 @@ class Library
                 else
                     buf.append((char) ('a' + (halfbyte - 10)));
                 halfbyte = data[i] & 0x0F;
-            } while(two_halfs++ < 1);
+            } while (two_halfs++ < 1);
         }
         return buf.toString();
     }
 
-    public static boolean checkCRC(String fileName, String sha1) throws IOException
+    public static boolean checkCRC(String fileName, String sha1)
     {
         try
         {
@@ -176,7 +203,9 @@ class Library
             }
             inFile.close();
             return sha1.equalsIgnoreCase(convertToHex(digester.digest()));
-        } catch (NoSuchAlgorithmException e) {
+        }
+        catch (Exception e)
+        {
             e.printStackTrace();
         }
         return false;
@@ -184,18 +213,18 @@ class Library
 
     public static String mkdirParents(String rootPath, String filePath, int skip)
     {
-        String[] paths=filePath.split("/");
+        String[] paths = filePath.split("/");
         String path = "";
-        for (int pit=0;pit<paths.length-skip;pit++)
+        for (int pit = 0; pit < paths.length - skip; pit++)
         {
-            if (paths[pit].length()==0)
+            if (paths[pit].length() == 0)
                 continue;
-            path+="/"+paths[pit];
-            File dir=new File(rootPath+path);
+            path += "/" + paths[pit];
+            File dir = new File(rootPath + path);
             dir.mkdir();
-            MinistroActivity.nativeChmode(rootPath+path, 0755);
+            MinistroActivity.nativeChmode(rootPath + path, 0755);
         }
-        return rootPath+path;
+        return rootPath + path;
     }
 
     public static void removeAllFiles(String path)
@@ -203,16 +232,16 @@ class Library
         File f = new File(path);
         if (!f.exists())
             return;
-        String files[]=f.list();
+        String files[] = f.list();
         if (!path.endsWith("/"))
-            path+="/";
-        for (int i=0;i<files.length;i++)
+            path += "/";
+        for (int i = 0; i < files.length; i++)
         {
             try
             {
-                new File(path+files[i]).delete();
+                new File(path + files[i]).delete();
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 e.printStackTrace();
             }
@@ -221,10 +250,11 @@ class Library
 
     public static String join(Collection<String> s, String delimiter)
     {
-        if (s == null || s.isEmpty()) return "";
+        if (s == null || s.isEmpty())
+            return "";
         Iterator<String> iter = s.iterator();
         StringBuilder builder = new StringBuilder(iter.next());
-        while( iter.hasNext() )
+        while (iter.hasNext())
         {
             builder.append(delimiter).append(iter.next());
         }
@@ -238,12 +268,12 @@ class Library
 
         String value = null;
         if (out.containsKey(outKey))
-            value=out.getString(outKey);
+            value = out.getString(outKey);
 
-        if (value!=null && value.length()>0 && value.charAt(value.length()-1)!='\t')
-            value=value+"\t";
+        if (value != null && value.length() > 0 && value.charAt(value.length() - 1) != '\t')
+            value = value + "\t";
 
-        value=value+in.getString(inKey);
+        value = value + in.getString(inKey);
         out.putString(outKey, value);
     }
 };

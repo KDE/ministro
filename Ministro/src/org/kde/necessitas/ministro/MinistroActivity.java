@@ -13,7 +13,7 @@
 
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ */
 
 package org.kde.necessitas.ministro;
 
@@ -34,8 +34,8 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.concurrent.Semaphore;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -45,8 +45,8 @@ import javax.xml.parsers.ParserConfigurationException;
 import org.apache.http.client.ClientProtocolException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import org.w3c.dom.Node;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.NotificationManager;
@@ -72,18 +72,21 @@ import android.os.StatFs;
 import android.provider.Settings;
 import android.util.Log;
 
+@SuppressLint("Wakelock")
 public class MinistroActivity extends Activity
 {
-    private static final int CONNECTION_TIMEOUT = 20000; // 20 seconds for connection timeout
-    private static final int READ_TIMEOUT = 10000; // 10 seconds for read timeout
+    // 20 seconds for connection timeout
+    private static final int CONNECTION_TIMEOUT = 20000;
+
+    // 10 seconds for read timeout
+    private static final int READ_TIMEOUT = 10000;
 
     public native static int nativeChmode(String filepath, int mode);
-    private static final String DOMAIN_NAME="https://files.kde.org/necessitas/ministro/android/necessitas/";
 
-    private String[] m_modules;
-    private int m_id=-1;
-    private String m_qtLibsRootPath;
-    private WakeLock m_wakeLock;
+    private int m_id = -1;
+    private Session m_session = null;
+    private String m_rootPath = null;
+    private WakeLock m_wakeLock = null;
 
     private void checkNetworkAndDownload(final boolean update)
     {
@@ -94,107 +97,134 @@ public class MinistroActivity extends Activity
             AlertDialog.Builder builder = new AlertDialog.Builder(MinistroActivity.this);
             builder.setMessage(getResources().getString(R.string.ministro_network_access_msg));
             builder.setCancelable(true);
-            builder.setNeutralButton(getResources().getString(R.string.settings_msg), new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int id) {
-                        final ProgressDialog m_dialog = ProgressDialog.show(MinistroActivity.this, null, getResources().getString(R.string.wait_for_network_connection_msg), true, true, new DialogInterface.OnCancelListener() {
-                            public void onCancel(DialogInterface dialog)
+            builder.setNeutralButton(getResources().getString(R.string.settings_msg), new DialogInterface.OnClickListener()
+            {
+                public void onClick(DialogInterface dialog, int id)
+                {
+                    final ProgressDialog m_dialog = ProgressDialog.show(MinistroActivity.this, null, getResources().getString(R.string.wait_for_network_connection_msg), true, true,
+                            new DialogInterface.OnCancelListener()
                             {
-                                finishMe();
-                            }
-                        });
-                        getApplication().registerReceiver(new BroadcastReceiver() {
-                            @Override
-                            public void onReceive(Context context, Intent intent)
-                            {
-                                if (isOnline(MinistroActivity.this))
+                                public void onCancel(DialogInterface dialog)
                                 {
-                                    try
-                                    {
-                                        getApplication().unregisterReceiver(this);
-                                    }
-                                    catch(Exception e)
-                                    {
-                                        e.printStackTrace();
-                                    }
-                                    runOnUiThread(new Runnable() {
-                                        public void run()
-                                        {
-                                            m_dialog.dismiss();
-                                            new CheckLibraries().execute(update);
-                                        }
-                                    });
+                                    finishMe(Session.Result.Canceled);
                                 }
-                            }
-                        }, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
-                        try {
-                            startActivity(new Intent(Settings.ACTION_WIRELESS_SETTINGS));
-                        } catch(Exception e) {
-                            e.printStackTrace();
-                            try {
-                                startActivity(new Intent(Settings.ACTION_WIFI_SETTINGS));
-                            } catch(Exception e1) {
-
-                                e1.printStackTrace();
+                            });
+                    getApplication().registerReceiver(new BroadcastReceiver()
+                    {
+                        @Override
+                        public void onReceive(Context context, Intent intent)
+                        {
+                            if (isOnline(MinistroActivity.this))
+                            {
+                                try
+                                {
+                                    getApplication().unregisterReceiver(this);
+                                }
+                                catch (Exception e)
+                                {
+                                    e.printStackTrace();
+                                }
+                                runOnUiThread(new Runnable()
+                                {
+                                    public void run()
+                                    {
+                                        m_dialog.dismiss();
+                                        new CheckLibraries().execute(update);
+                                    }
+                                });
                             }
                         }
-                        dialog.dismiss();
-                    }
-                });
-            builder.setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int id)
+                    }, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
+                    try
                     {
-                            dialog.cancel();
+                        startActivity(new Intent(Settings.ACTION_WIRELESS_SETTINGS));
                     }
-                });
-            builder.setOnCancelListener(new DialogInterface.OnCancelListener() {
+                    catch (Exception e)
+                    {
+                        e.printStackTrace();
+                        try
+                        {
+                            startActivity(new Intent(Settings.ACTION_WIFI_SETTINGS));
+                        }
+                        catch (Exception e1)
+                        {
+
+                            e1.printStackTrace();
+                        }
+                    }
+                    dialog.dismiss();
+                }
+            });
+            builder.setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener()
+            {
+                public void onClick(DialogInterface dialog, int id)
+                {
+                    dialog.cancel();
+                }
+            });
+            builder.setOnCancelListener(new DialogInterface.OnCancelListener()
+            {
                 public void onCancel(DialogInterface dialog)
                 {
-                    finishMe();
+                    finishMe(Session.Result.Canceled);
                 }
             });
             AlertDialog alert = builder.create();
             alert.show();
         }
     }
-    private AlertDialog m_distSpaceDialog=null;
-    private final int freeSpaceCode=0xf3ee500;
+
+    private AlertDialog m_distSpaceDialog = null;
+    private final int freeSpaceCode = 0xf3ee500;
     private Semaphore m_diskSpaceSemaphore = new Semaphore(0);
 
+    @SuppressLint("InlinedApi")
     private boolean checkFreeSpace(final long size) throws InterruptedException
     {
-        final StatFs stat = new StatFs(m_qtLibsRootPath);
+        final StatFs stat = new StatFs(m_rootPath);
         if (stat.getBlockSize() * stat.getAvailableBlocks() < size)
         {
-            runOnUiThread(new Runnable() {
-                public void run() {
+            runOnUiThread(new Runnable()
+            {
+                public void run()
+                {
 
                     AlertDialog.Builder builder = new AlertDialog.Builder(MinistroActivity.this);
-                    builder.setMessage(getResources().getString(R.string.ministro_disk_space_msg,
-                                                (size-(stat.getBlockSize() * stat.getAvailableBlocks()))/1024+"Kb"));
+                    builder.setMessage(getResources().getString(R.string.ministro_disk_space_msg, (size - (stat.getBlockSize() * stat.getAvailableBlocks())) / 1024 + "Kb"));
                     builder.setCancelable(true);
-                    builder.setNeutralButton(getResources().getString(R.string.settings_msg), new DialogInterface.OnClickListener() {
-                            public void onClick(DialogInterface dialog, int id) {
-                                try {
-                                    startActivityForResult(new Intent(Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS), freeSpaceCode);
-                                } catch(Exception e) {
-                                    e.printStackTrace();
-                                    try {
-                                        startActivityForResult(new Intent(Settings.ACTION_MANAGE_ALL_APPLICATIONS_SETTINGS), freeSpaceCode);
-                                    } catch(Exception e1) {
+                    builder.setNeutralButton(getResources().getString(R.string.settings_msg), new DialogInterface.OnClickListener()
+                    {
+                        public void onClick(DialogInterface dialog, int id)
+                        {
+                            try
+                            {
+                                startActivityForResult(new Intent(Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS), freeSpaceCode);
+                            }
+                            catch (Exception e)
+                            {
+                                e.printStackTrace();
+                                try
+                                {
+                                    startActivityForResult(new Intent(Settings.ACTION_MANAGE_ALL_APPLICATIONS_SETTINGS), freeSpaceCode);
+                                }
+                                catch (Exception e1)
+                                {
 
-                                        e1.printStackTrace();
-                                    }
+                                    e1.printStackTrace();
                                 }
                             }
-                        });
-                    builder.setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
-                            public void onClick(DialogInterface dialog, int id)
-                            {
-                                dialog.dismiss();
-                                m_diskSpaceSemaphore.release();
-                            }
-                        });
-                    builder.setOnCancelListener(new DialogInterface.OnCancelListener() {
+                        }
+                    });
+                    builder.setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener()
+                    {
+                        public void onClick(DialogInterface dialog, int id)
+                        {
+                            dialog.dismiss();
+                            m_diskSpaceSemaphore.release();
+                        }
+                    });
+                    builder.setOnCancelListener(new DialogInterface.OnCancelListener()
+                    {
                         public void onCancel(DialogInterface dialog)
                         {
                             dialog.dismiss();
@@ -210,10 +240,10 @@ public class MinistroActivity extends Activity
         else
             return true;
 
-        return stat.getBlockSize() * stat.getAvailableBlocks()>size;
+        return stat.getBlockSize() * stat.getAvailableBlocks() > size;
     }
 
-    protected void onActivityResult (int requestCode, int resultCode, Intent data)
+    protected void onActivityResult(int requestCode, int resultCode, Intent data)
     {
         if (requestCode == freeSpaceCode)
         {
@@ -226,48 +256,53 @@ public class MinistroActivity extends Activity
                     m_distSpaceDialog = null;
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 e.printStackTrace();
             }
         }
     }
-    private ServiceConnection m_ministroConnection=new ServiceConnection()
+
+    private ServiceConnection m_ministroConnection = new ServiceConnection()
     {
         public void onServiceConnected(ComponentName name, IBinder service)
         {
             if (getIntent().hasExtra("id"))
-                m_id=getIntent().getExtras().getInt("id");
-
-            if (getIntent().hasExtra("modules"))
             {
-                m_modules=getIntent().getExtras().getStringArray("modules");
-                AlertDialog.Builder builder = new AlertDialog.Builder(MinistroActivity.this);
-                builder.setMessage(getResources().getString(R.string.download_app_libs_msg,
-                        getIntent().getExtras().getString("name")))
-                    .setCancelable(false)
-                    .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
-                        public void onClick(DialogInterface dialog, int id) {
-                            dialog.dismiss();
-                            checkNetworkAndDownload(false);
-                        }
-                    })
-                    .setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
-                        public void onClick(DialogInterface dialog, int id) {
-                                dialog.cancel();
-                                finishMe();
-                        }
-                    });
-                AlertDialog alert = builder.create();
-                try
+                m_id = getIntent().getExtras().getInt("id");
+                m_session = MinistroService.instance().getSession(m_id);
+                if (m_session != null)
                 {
-                    alert.show();
+                    AlertDialog.Builder builder = new AlertDialog.Builder(MinistroActivity.this);
+                    builder.setMessage(getResources().getString(R.string.download_app_libs_msg, m_session.getApplicationName())).setCancelable(false)
+                            .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener()
+                            {
+                                public void onClick(DialogInterface dialog, int id)
+                                {
+                                    dialog.dismiss();
+                                    checkNetworkAndDownload(false);
+                                }
+                            }).setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener()
+                            {
+                                public void onClick(DialogInterface dialog, int id)
+                                {
+                                    dialog.cancel();
+                                    finishMe(Session.Result.Canceled);
+                                }
+                            });
+                    AlertDialog alert = builder.create();
+                    try
+                    {
+                        alert.show();
+                    }
+                    catch (Exception e)
+                    {
+                        e.printStackTrace();
+                        checkNetworkAndDownload(false);
+                    }
                 }
-                catch (Exception e)
-                {
-                    e.printStackTrace();
-                    checkNetworkAndDownload(false);
-                }
+                else
+                    m_id = -1;
             }
             else
                 checkNetworkAndDownload(true);
@@ -279,23 +314,13 @@ public class MinistroActivity extends Activity
         }
     };
 
-    void finishMe()
+    void finishMe(Session.Result res)
     {
         if (-1 != m_id && null != MinistroService.instance())
-            MinistroService.instance().retrievalFinished(m_id);
+            MinistroService.instance().retrievalFinished(m_id, res);
         NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         nm.cancelAll();
         finish();
-    }
-
-    private static URL getVersionUrl(Context c) throws MalformedURLException
-    {
-        return new URL(DOMAIN_NAME+MinistroService.getRepository(c)+"/"+android.os.Build.CPU_ABI+"/android-"+android.os.Build.VERSION.SDK_INT+"/versions.xml");
-    }
-
-    private static URL getLibsXmlUrl(Context c, String version) throws MalformedURLException
-    {
-        return new URL(DOMAIN_NAME+MinistroService.getRepository(c)+"/"+android.os.Build.CPU_ABI+"/android-"+android.os.Build.VERSION.SDK_INT+"/libs-"+version+".xml");
     }
 
     public static boolean isOnline(Context c)
@@ -309,11 +334,12 @@ public class MinistroActivity extends Activity
 
     private static String deviceSupportedFeatures(String supportedFeatures)
     {
-        if (null==supportedFeatures)
+        if (null == supportedFeatures)
             return "";
-        String [] serverFeaturesList=supportedFeatures.trim().split(" ");
-        String [] deviceFeaturesList=null;
-        try {
+        String[] serverFeaturesList = supportedFeatures.trim().split(" ");
+        String[] deviceFeaturesList = null;
+        try
+        {
             FileInputStream fstream = new FileInputStream("/proc/cpuinfo");
             DataInputStream in = new DataInputStream(fstream);
             BufferedReader br = new BufferedReader(new InputStreamReader(in));
@@ -322,55 +348,57 @@ public class MinistroActivity extends Activity
             {
                 if (strLine.startsWith("Features"))
                 {
-                    deviceFeaturesList=strLine.substring(strLine.indexOf(":")+1).trim().split(" ");
+                    deviceFeaturesList = strLine.substring(strLine.indexOf(":") + 1).trim().split(" ");
                     break;
                 }
             }
             br.close();
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             e.printStackTrace();
             return "";
         }
 
-        String features="";
-        for(String sfeature: serverFeaturesList)
-            for (String dfeature: deviceFeaturesList)
+        String features = "";
+        for (String sfeature : serverFeaturesList)
+            for (String dfeature : deviceFeaturesList)
                 if (sfeature.equals(dfeature))
-                    features+="_"+dfeature;
+                    features += "_" + dfeature;
 
         return features;
     }
 
-
-    public static double downloadVersionXmlFile(Context c, boolean checkOnly)
+    public double downloadVersionXmlFile(Integer sourceId, boolean checkOnly)
     {
-        if (!isOnline(c))
-            return-1;
+        if (!isOnline(this))
+            return -1;
         try
         {
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             DocumentBuilder builder = factory.newDocumentBuilder();
             Document dom = null;
             Element root = null;
-            URLConnection connection = getVersionUrl(c).openConnection();
+            URLConnection connection = m_session.getVersionsFileUrl(sourceId).openConnection();
             connection.setConnectTimeout(CONNECTION_TIMEOUT);
             connection.setReadTimeout(READ_TIMEOUT);
             dom = builder.parse(connection.getInputStream());
             root = dom.getDocumentElement();
             root.normalize();
             double version = Double.valueOf(root.getAttribute("latest"));
-            if ( MinistroService.instance().getVersion() >= version )
-                return MinistroService.instance().getVersion();
+            double sver = m_session.getVersion(sourceId);
+            if (sver >= version)
+                return sver;
 
             if (checkOnly)
                 return version;
-            String supportedFeatures=null;
+            String supportedFeatures = null;
             if (root.hasAttribute("features"))
-                supportedFeatures=root.getAttribute("features");
-            connection = getLibsXmlUrl(c, version+deviceSupportedFeatures(supportedFeatures)).openConnection();
-            File file= new File(MinistroService.instance().getVersionXmlFile());
-            file.delete();
-            FileOutputStream outstream = new FileOutputStream(MinistroService.instance().getVersionXmlFile());
+                supportedFeatures = root.getAttribute("features");
+            connection = m_session.getLibsXmlUrl(sourceId, version + deviceSupportedFeatures(supportedFeatures)).openConnection();
+            String xmlFilePath = m_session.getVersionXmlFile(sourceId);
+            new File(xmlFilePath).delete();
+            FileOutputStream outstream = new FileOutputStream(xmlFilePath);
             InputStream instream = connection.getInputStream();
             byte[] tmp = new byte[2048];
             int downloaded;
@@ -378,17 +406,27 @@ public class MinistroActivity extends Activity
                 outstream.write(tmp, 0, downloaded);
 
             outstream.close();
-            MinistroService.instance().refreshLibraries(false);
+            m_session.createSourcePah(sourceId);
             return version;
-        } catch (ClientProtocolException e) {
+        }
+        catch (ClientProtocolException e)
+        {
             e.printStackTrace();
-        } catch (IOException e) {
+        }
+        catch (IOException e)
+        {
             e.printStackTrace();
-        } catch (ParserConfigurationException e) {
+        }
+        catch (ParserConfigurationException e)
+        {
             e.printStackTrace();
-        } catch (IllegalStateException e) {
+        }
+        catch (IllegalStateException e)
+        {
             e.printStackTrace();
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             e.printStackTrace();
         }
         return -1;
@@ -398,7 +436,7 @@ public class MinistroActivity extends Activity
     {
         private ProgressDialog m_dialog = null;
         private String m_status = getResources().getString(R.string.start_downloading_msg);
-        private int m_totalSize=0, m_totalProgressSize=0;
+        private int m_totalSize = 0, m_totalProgressSize = 0;
 
         @Override
         protected void onPreExecute()
@@ -409,18 +447,19 @@ public class MinistroActivity extends Activity
             m_dialog.setMessage(m_status);
             m_dialog.setCancelable(true);
             m_dialog.setCanceledOnTouchOutside(false);
-            m_dialog.setOnCancelListener(new DialogInterface.OnCancelListener(){
+            m_dialog.setOnCancelListener(new DialogInterface.OnCancelListener()
+            {
                 public void onCancel(DialogInterface dialog)
                 {
                     DownloadManager.this.cancel(false);
-                    finishMe();
+                    finishMe(Session.Result.Canceled);
                 }
             });
             try
             {
                 m_dialog.show();
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 e.printStackTrace();
                 m_dialog = null;
@@ -428,39 +467,38 @@ public class MinistroActivity extends Activity
             super.onPreExecute();
         }
 
-        private boolean DownloadItem(String url, String file, long size, String fileSha1) throws NoSuchAlgorithmException, MalformedURLException, IOException
+        private boolean DownloadItem(String url, String rootPath, String file, long size, String fileSha1) throws NoSuchAlgorithmException, MalformedURLException, IOException
         {
-            for (int i=0;i<2;i++)
+            for (int i = 0; i < 2; i++)
             {
                 MessageDigest digester = MessageDigest.getInstance("SHA-1");
                 URLConnection connection = new URL(url).openConnection();
-                Library.mkdirParents(m_qtLibsRootPath, file, 1);
-                String filePath=m_qtLibsRootPath+file;
-                int progressSize=0;
+                Library.mkdirParents(rootPath, file, 1);
+                String filePath = rootPath + file;
+                int progressSize = 0;
                 try
                 {
                     FileOutputStream outstream = new FileOutputStream(filePath);
                     InputStream instream = connection.getInputStream();
                     int downloaded;
                     byte[] tmp = new byte[2048];
-                    int oldProgress=-1;
+                    int oldProgress = -1;
                     while ((downloaded = instream.read(tmp)) != -1)
                     {
                         if (isCancelled())
                             break;
-                        progressSize+=downloaded;
-                        m_totalProgressSize+=downloaded;
+                        progressSize += downloaded;
+                        m_totalProgressSize += downloaded;
                         digester.update(tmp, 0, downloaded);
                         outstream.write(tmp, 0, downloaded);
-                        int progress=(int)(progressSize*100/size);
-                        if (progress!=oldProgress)
+                        int progress = (int) (progressSize * 100 / size);
+                        if (progress != oldProgress)
                         {
-                            publishProgress(progress
-                                    , m_totalProgressSize);
+                            publishProgress(progress, m_totalProgressSize);
                             oldProgress = progress;
                         }
                     }
-                    String sha1 =  Library.convertToHex(digester.digest());
+                    String sha1 = Library.convertToHex(digester.digest());
                     if (sha1.equalsIgnoreCase(fileSha1))
                     {
                         outstream.close();
@@ -468,24 +506,20 @@ public class MinistroActivity extends Activity
                         return true;
                     }
                     else
-                        Log.e("Ministro", "sha1 mismatch, the file:"+file+" will be removed, expected sha1:"+fileSha1+" got sha1:"+sha1+" file was downloaded from "+url);
+                        Log.e("Ministro", "sha1 mismatch, the file:" + file + " will be removed, expected sha1:" + fileSha1 + " got sha1:" + sha1 + " file was downloaded from " + url);
                     outstream.close();
                     File f = new File(filePath);
                     f.delete();
-                } catch (Exception e) {
+                }
+                catch (Exception e)
+                {
                     e.printStackTrace();
                     File f = new File(filePath);
                     f.delete();
                 }
-                m_totalProgressSize-=progressSize;
+                m_totalProgressSize -= progressSize;
             }
             return false;
-        }
-
-        void removeFile(String file)
-        {
-            File f = new File(m_qtLibsRootPath+file);
-            f.delete();
         }
 
         @Override
@@ -493,52 +527,64 @@ public class MinistroActivity extends Activity
         {
             try
             {
-                for (int i=0;i<params.length;i++)
+                for (int i = 0; i < params.length; i++)
                 {
-                    m_totalSize+=params[i].size;
+                    m_totalSize += params[i].size;
                     if (null != params[i].needs)
-                        for (int j=0;j<params[i].needs.length;j++)
-                            m_totalSize+=params[i].needs[j].size;
+                        for (int j = 0; j < params[i].needs.length; j++)
+                            m_totalSize += params[i].needs[j].size;
                 }
                 m_dialog.setMax(m_totalSize);
                 if (!checkFreeSpace(m_totalSize))
                     return null;
-                for (int i=0;i<params.length;i++)
+
+                for (int i = 0; i < params.length; i++)
                 {
                     if (isCancelled())
                         break;
                     synchronized (m_status)
                     {
-                        m_status=params[i].name+" ";
+                        m_status = params[i].name + " ";
                     }
                     publishProgress(0, m_totalProgressSize);
-                    if (!DownloadItem(params[i].url, params[i].filePath, params[i].size, params[i].sha1))
+                    String rootPath = m_session.getLibsRootPath(params[i].sourceId);
+                    if (!DownloadItem(params[i].url, rootPath, params[i].filePath, params[i].size, params[i].sha1))
                         break;
 
                     if (null != params[i].needs)
-                        for (int j=0;j<params[i].needs.length;j++)
+                        for (int j = 0; j < params[i].needs.length; j++)
                         {
                             synchronized (m_status)
                             {
-                                m_status=params[i].needs[j].name+" ";
+                                m_status = params[i].needs[j].name + " ";
                             }
                             publishProgress(0, m_totalProgressSize);
-                            if (!DownloadItem(params[i].needs[j].url, params[i].needs[j].filePath, params[i].needs[j].size, params[i].needs[j].sha1))
+                            if (!DownloadItem(params[i].needs[j].url, rootPath, params[i].needs[j].filePath, params[i].needs[j].size, params[i].needs[j].sha1))
                             {
-                                for (int k=0;k<j;k++) // remove previous neede files
-                                    removeFile(params[i].needs[k].filePath);
-                                removeFile(params[i].filePath); // remove the parent
+                                for (int k = 0; k < j; k++)
+                                    // remove previous needed files
+                                    new File(rootPath + params[i].needs[k].filePath).delete();
+                                // remove the parent
+                                new File(rootPath + params[i].filePath).delete();
                                 break;
                             }
                         }
                 }
-            } catch (NoSuchAlgorithmException e) {
+            }
+            catch (NoSuchAlgorithmException e)
+            {
                 e.printStackTrace();
-            } catch (MalformedURLException e) {
+            }
+            catch (MalformedURLException e)
+            {
                 e.printStackTrace();
-            } catch (IOException e) {
+            }
+            catch (IOException e)
+            {
                 e.printStackTrace();
-            } catch (Exception e) {
+            }
+            catch (Exception e)
+            {
                 e.printStackTrace();
             }
             return null;
@@ -553,12 +599,12 @@ public class MinistroActivity extends Activity
                 {
                     synchronized (m_status)
                     {
-                        m_dialog.setMessage(m_status+values[0]+"%");
+                        m_dialog.setMessage(m_status + values[0] + "%");
                         m_dialog.setProgress(values[1]);
                     }
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 e.printStackTrace();
             }
@@ -574,23 +620,23 @@ public class MinistroActivity extends Activity
                 m_dialog.dismiss();
                 m_dialog = null;
             }
-            MinistroService.instance().refreshLibraries(false);
-            finishMe();
+            m_session.refreshLibraries(false);
+            finishMe(Session.Result.Canceled);
         }
     }
 
-    private class CheckLibraries extends AsyncTask<Boolean, String, Double>
+    private class CheckLibraries extends AsyncTask<Boolean, String, Boolean>
     {
         private ProgressDialog m_dialog = null;
-        private final ArrayList<Library> newLibs = new ArrayList<Library>();
+        private final HashMap<String, Library> newLibs = new HashMap<String, Library>();
         private String m_message;
+
         @Override
         protected void onPreExecute()
         {
             try
             {
-                m_dialog = ProgressDialog.show(MinistroActivity.this, null,
-                        getResources().getString(R.string.checking_libraries_msg), true, true);
+                m_dialog = ProgressDialog.show(MinistroActivity.this, null, getResources().getString(R.string.checking_libraries_msg), true, true);
             }
             catch (Exception e)
             {
@@ -601,180 +647,126 @@ public class MinistroActivity extends Activity
         }
 
         @Override
-        protected Double doInBackground(Boolean... update)
+        protected Boolean doInBackground(Boolean... update)
         {
-            double version=0.0;
             try
             {
-                DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-                DocumentBuilder builder = factory.newDocumentBuilder();
-                Document dom = null;
-                Element root = null;
-                double oldVersion=MinistroService.instance().getVersion();
-                if (update[0] || MinistroService.instance().getVersion()<0)
-                    version = downloadVersionXmlFile(MinistroActivity.this, false);
-                else
-                    version = MinistroService.instance().getVersion();
-
-                SharedPreferences preferences=getSharedPreferences("Ministro", MODE_PRIVATE);
+                SharedPreferences preferences = getSharedPreferences("Ministro", MODE_PRIVATE);
+                boolean systemUpdate = !preferences.getString("CODENAME", "").equals(android.os.Build.VERSION.CODENAME)
+                        || !preferences.getString("INCREMENTAL", "").equals(android.os.Build.VERSION.INCREMENTAL) || !preferences.getString("RELEASE", "").equals(android.os.Build.VERSION.RELEASE);
                 // extract device look&feel
-                if (!preferences.getString("CODENAME", "").equals(android.os.Build.VERSION.CODENAME) ||
-                        !preferences.getString("INCREMENTAL", "").equals(android.os.Build.VERSION.INCREMENTAL) ||
-                        !preferences.getString("RELEASE", "").equals(android.os.Build.VERSION.RELEASE) ||
-                        !preferences.getString("MINISTRO_VERSION", "").equals(getPackageManager().getPackageInfo(getPackageName(), 0).versionName) ||
-                        !(new File(m_qtLibsRootPath+"style").exists()))
+                if (systemUpdate || !preferences.getString("MINISTRO_VERSION", "").equals(getPackageManager().getPackageInfo(getPackageName(), 0).versionName)
+                        || !(new File(m_rootPath + "style").exists()))
                 {
                     m_message = getResources().getString(R.string.extracting_look_n_feel_msg);
                     publishProgress(m_message);
-                    new ExtractStyle(MinistroActivity.this, m_qtLibsRootPath+"style/");
-                    SharedPreferences.Editor editor= preferences.edit();
-                    editor.putString("MINISTRO_VERSION",getPackageManager().getPackageInfo(getPackageName(), 0).versionName);
+                    String path = Library.mkdirParents(m_rootPath, "style", 0);
+                    Library.removeAllFiles(path); // clean old files
+                    new ExtractStyle(MinistroActivity.this, path);
+                    SharedPreferences.Editor editor = preferences.edit();
+                    editor.putString("MINISTRO_VERSION", getPackageManager().getPackageInfo(getPackageName(), 0).versionName);
                     editor.commit();
                 }
 
-                ArrayList<Library> libraries;
-                if (update[0])
-                {
-                    if (oldVersion!=version)
-                        libraries = MinistroService.instance().getDownloadedLibraries();
-                    else
-                        return version;
-                }
-                else
-                    libraries = MinistroService.instance().getAvailableLibraries();
-
-                ArrayList<String> notFoundModules = new ArrayList<String>();
-                if (m_modules!=null)
-                    MinistroService.instance().checkModules(m_modules, notFoundModules);
-
-                dom = builder.parse(new FileInputStream(MinistroService.instance().getVersionXmlFile()));
-
-                factory = DocumentBuilderFactory.newInstance();
-                builder = factory.newDocumentBuilder();
-                root = dom.getDocumentElement();
-                root.normalize();
-
                 // extract device root certificates
-                if (!preferences.getString("CODENAME", "").equals(android.os.Build.VERSION.CODENAME) ||
-                        !preferences.getString("INCREMENTAL", "").equals(android.os.Build.VERSION.INCREMENTAL) ||
-                        !preferences.getString("RELEASE", "").equals(android.os.Build.VERSION.RELEASE))
+                if (systemUpdate || !(new File(m_rootPath + "ssl").exists()))
                 {
                     m_message = getResources().getString(R.string.extracting_SSL_msg);
                     publishProgress(m_message);
-                    String environmentVariables=root.getAttribute("environmentVariables");
-                    environmentVariables=environmentVariables.replaceAll("MINISTRO_PATH", "");
-                    String environmentVariablesList[]=environmentVariables.split("\t");
-                    for (int i=0;i<environmentVariablesList.length;i++)
+                    String path = Library.mkdirParents(m_rootPath, "ssl", 0);
+                    Library.removeAllFiles(path);
+                    try
                     {
-                        String environmentVariable[]=environmentVariablesList[i].split("=");
-                        if (environmentVariable[0].equals("MINISTRO_SSL_CERTS_PATH"))
+                        KeyStore ks = null;
+                        if (Build.VERSION.SDK_INT > 13)
                         {
-                            String path=Library.mkdirParents(getFilesDir().getAbsolutePath(),environmentVariable[1], 0);
-                            Library.removeAllFiles(path);
-                            try
-                            {
-                                KeyStore ks = null;
-                                if (Build.VERSION.SDK_INT>13)
-                                {
-                                    ks = KeyStore.getInstance("AndroidCAStore");
-                                    ks.load(null, null);
-                                }
-                                else
-                                {
-                                    ks= KeyStore.getInstance(KeyStore.getDefaultType());
-                                    String cacertsPath=System.getProperty("javax.net.ssl.trustStore");
-                                    if (null == cacertsPath)
-                                        cacertsPath="/system/etc/security/cacerts.bks";
-                                    FileInputStream instream = new FileInputStream(new File(cacertsPath));
-                                    ks.load(instream, null);
-                                }
-
-                                for (Enumeration<String> aliases = ks.aliases(); aliases.hasMoreElements(); )
-                                {
-                                    String aName = aliases.nextElement();
-                                    try
-                                    {
-                                        X509Certificate cert=(X509Certificate) ks.getCertificate(aName);
-                                        if (null==cert)
-                                            continue;
-                                        String filePath=path+"/"+cert.getType()+"_"+cert.hashCode()+".der";
-                                        FileOutputStream outstream = new FileOutputStream(new File(filePath));
-                                        byte buff[]=cert.getEncoded();
-                                        outstream.write(buff, 0, buff.length);
-                                        outstream.close();
-                                        nativeChmode(filePath, 0644);
-                                    } catch(KeyStoreException e) {
-                                        e.printStackTrace();
-                                    } catch(Exception e) {
-                                        e.printStackTrace();
-                                    }
-                                }
-                            } catch (KeyStoreException e) {
-                                e.printStackTrace();
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            } catch (NoSuchAlgorithmException e) {
-                                e.printStackTrace();
-                            } catch (CertificateException e) {
-                                e.printStackTrace();
-                            }
-                            SharedPreferences.Editor editor= preferences.edit();
-                            editor.putString("CODENAME",android.os.Build.VERSION.CODENAME);
-                            editor.putString("INCREMENTAL", android.os.Build.VERSION.INCREMENTAL);
-                            editor.putString("RELEASE", android.os.Build.VERSION.RELEASE);
-                            editor.commit();
-                            break;
-                        }
-                    }
-                }
-
-                Node node = root.getFirstChild();
-                while(node != null)
-                {
-                    if (node.getNodeType() == Node.ELEMENT_NODE)
-                    {
-                        Library lib= Library.getLibrary((Element)node, true);
-                        if (update[0])
-                        { // check for updates
-                            for (int j=0;j<libraries.size();j++)
-                                if (libraries.get(j).name.equals(lib.name))
-                                {
-                                    newLibs.add(lib);
-                                    break;
-                                }
+                            ks = KeyStore.getInstance("AndroidCAStore");
+                            ks.load(null, null);
                         }
                         else
-                        {// download missing libraries
-                            for(String module : notFoundModules)
-                                if (module.equals(lib.name))
-                                {
-                                    newLibs.add(lib);
-                                    break;
-                                }
+                        {
+                            ks = KeyStore.getInstance(KeyStore.getDefaultType());
+                            String cacertsPath = System.getProperty("javax.net.ssl.trustStore");
+                            if (null == cacertsPath)
+                                cacertsPath = "/system/etc/security/cacerts.bks";
+                            FileInputStream instream = new FileInputStream(new File(cacertsPath));
+                            ks.load(instream, null);
+                        }
+
+                        for (Enumeration<String> aliases = ks.aliases(); aliases.hasMoreElements();)
+                        {
+                            String aName = aliases.nextElement();
+                            try
+                            {
+                                X509Certificate cert = (X509Certificate) ks.getCertificate(aName);
+                                if (null == cert)
+                                    continue;
+                                String filePath = path + "/" + cert.getType() + "_" + cert.hashCode() + ".der";
+                                FileOutputStream outstream = new FileOutputStream(new File(filePath));
+                                byte buff[] = cert.getEncoded();
+                                outstream.write(buff, 0, buff.length);
+                                outstream.close();
+                                nativeChmode(filePath, 0644);
+                            }
+                            catch (KeyStoreException e)
+                            {
+                                e.printStackTrace();
+                            }
+                            catch (Exception e)
+                            {
+                                e.printStackTrace();
+                            }
                         }
                     }
-
-                    // Workaround for an unbelievable bug !!!
-                    try {
-                        node = node.getNextSibling();
-                    } catch (Exception e) {
+                    catch (KeyStoreException e)
+                    {
                         e.printStackTrace();
-                        break;
+                    }
+                    catch (IOException e)
+                    {
+                        e.printStackTrace();
+                    }
+                    catch (NoSuchAlgorithmException e)
+                    {
+                        e.printStackTrace();
+                    }
+                    catch (CertificateException e)
+                    {
+                        e.printStackTrace();
+                    }
+                    SharedPreferences.Editor editor = preferences.edit();
+                    editor.putString("CODENAME", android.os.Build.VERSION.CODENAME);
+                    editor.putString("INCREMENTAL", android.os.Build.VERSION.INCREMENTAL);
+                    editor.putString("RELEASE", android.os.Build.VERSION.RELEASE);
+                    editor.commit();
+                }
+
+                boolean refreshLibraries = false;
+                for (Integer sourceId : m_session.getSourcesIds())
+                {
+                    // if is an update command or the xml file doesn't exists
+                    if ((update[0] || m_session.getVersion(sourceId) < 0) && downloadVersionXmlFile(sourceId, false) > -1)
+                    {
+                        // get the old libraries
+                        HashMap<String, Library> oldLibs = m_session.getChangedLibraries(sourceId);
+                        if (oldLibs != null)
+                            newLibs.putAll(oldLibs);
+                        refreshLibraries = true;
                     }
                 }
-                return version;
-            } catch (ClientProtocolException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (ParserConfigurationException e) {
-                e.printStackTrace();
-            } catch (IllegalStateException e) {
-                e.printStackTrace();
-            } catch (Exception e) {
+
+                if (refreshLibraries)
+                    m_session.refreshLibraries(false);
+
+                if (!update[0])
+                    m_session.checkModules(newLibs);
+                return true;
+            }
+            catch (Exception e)
+            {
                 e.printStackTrace();
             }
-            return -1.;
+            return false;
         }
 
         @Override
@@ -793,7 +785,7 @@ public class MinistroActivity extends Activity
         }
 
         @Override
-        protected void onPostExecute(Double result)
+        protected void onPostExecute(Boolean result)
         {
             try
             {
@@ -803,18 +795,18 @@ public class MinistroActivity extends Activity
                     m_dialog = null;
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 e.printStackTrace();
             }
-            if (newLibs.size()>0 && result>0)
+            if (newLibs.size() > 0 && result)
             {
                 Library[] libs = new Library[newLibs.size()];
-                libs = newLibs.toArray(libs);
+                libs = newLibs.values().toArray(libs);
                 new DownloadManager().execute(libs);
             }
             else
-                finishMe();
+                finishMe(Session.Result.Completed);
             super.onPostExecute(result);
         }
     }
@@ -822,12 +814,21 @@ public class MinistroActivity extends Activity
     @Override
     public void onCreate(Bundle savedInstanceState)
     {
+        try
+        {
+            Thread.sleep(20*1000);
+        }
+        catch (InterruptedException e)
+        {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
-        m_qtLibsRootPath = getFilesDir().getAbsolutePath()+"/qt/";
-        File dir=new File(m_qtLibsRootPath);
+        m_rootPath = getFilesDir().getAbsolutePath() + "/dl/";
+        File dir = new File(m_rootPath);
         dir.mkdirs();
-        nativeChmode(m_qtLibsRootPath, 0755);
+        nativeChmode(m_rootPath, 0755);
         bindService(new Intent("org.kde.necessitas.ministro.IMinistro"), m_ministroConnection, Context.BIND_AUTO_CREATE);
         PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
         m_wakeLock = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK, "Ministro");
@@ -849,7 +850,7 @@ public class MinistroActivity extends Activity
     @Override
     public void onConfigurationChanged(Configuration newConfig)
     {
-        //Avoid activity from being destroyed/created
+        // Avoid activity from being destroyed/created
         super.onConfigurationChanged(newConfig);
     }
 
