@@ -814,15 +814,6 @@ public class MinistroActivity extends Activity
     @Override
     public void onCreate(Bundle savedInstanceState)
     {
-        try
-        {
-            Thread.sleep(20*1000);
-        }
-        catch (InterruptedException e)
-        {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
         m_rootPath = getFilesDir().getAbsolutePath() + "/dl/";

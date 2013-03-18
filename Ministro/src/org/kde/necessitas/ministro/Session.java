@@ -88,14 +88,21 @@ public class Session
         m_sourcesIds = m_service.getSourcesIds(getSources());
         m_ministroRootPath = m_service.getFilesDir().getCanonicalPath() + "/";
         m_pathSeparator = System.getProperty("path.separator", ":");
+        long startTime = System.currentTimeMillis();
+        refreshLibraries(false);
+        long endTime = System.currentTimeMillis();
+        Log.i(MinistroService.TAG, "refreshLibraries took " + (endTime - startTime) + " ms");
+        startTime = System.currentTimeMillis();
         checkModulesImpl();
+        endTime = System.currentTimeMillis();
+        Log.i(MinistroService.TAG, "checkModulesImpl took " + (endTime - startTime) + " ms");
     }
 
     /**
      * Implements the
      * {@link IMinistro.Stub#checkModules(IMinistroCallback, String[], String, int, int)}
      * service method.
-     * 
+     *
      * @param callback
      * @param parameters
      * @throws RemoteException
@@ -379,12 +386,23 @@ public class Session
                     if (root.hasAttribute("environmentVariables"))
                     {
                         String environmentVariables = root.getAttribute("environmentVariables");
-                        environmentVariables = environmentVariables.replaceAll("MINISTRO_PATH", m_service.getFilesDir().getAbsolutePath());
-                        environmentVariables = "MINISTRO_ANDROID_STYLE_PATH=" + m_ministroRootPath + "style/\t" + environmentVariables;
+                        environmentVariables = environmentVariables.replaceAll("MINISTRO_PATH", m_ministroRootPath);
+                        environmentVariables = environmentVariables.replaceAll("MINISTRO_SOURCE_ROOT_PATH", getLibsRootPath(sourceId));
                         mergeEnvironmentVariables(environmentVariables);
+                        m_environmentVariables.put("MINISTRO_SSL_CERTS_PATH", m_ministroRootPath + "dl/ssl");
+                        m_environmentVariables.put("MINISTRO_ANDROID_STYLE_PATH", m_ministroRootPath + "dl/style");
                     }
                     if (root.hasAttribute("qtVersion"))
                         m_qtVersion = Integer.valueOf(root.getAttribute("qtVersion"));
+
+                    if (!root.hasAttribute("flags"))
+                    { // fix env vars
+                        if (m_environmentVariables.containsKey("QML_IMPORT_PATH"))
+                            m_environmentVariables.put("QML_IMPORT_PATH", getLibsRootPath(sourceId) + "imports");
+
+                        if (m_environmentVariables.containsKey("QT_PLUGIN_PATH"))
+                            m_environmentVariables.put("QT_PLUGIN_PATH", getLibsRootPath(sourceId) + "plugins");
+                    }
                     root.normalize();
                     Node node = root.getFirstChild();
 
@@ -440,13 +458,13 @@ public class Session
 
     /**
      * Helper method for the last step of the retrieval process.
-     * 
+     *
      * <p>
      * Checks the availability of the requested modules and informs the
      * requesting application about it via the {@link IMinistroCallback}
      * instance.
      * </p>
-     * 
+     *
      */
     void retrievalFinished(Result res)
     {
@@ -479,12 +497,12 @@ public class Session
     /**
      * Checks whether a given list of libraries are readily accessible (e.g.
      * usable by a program).
-     * 
+     *
      * <p>
      * If the <code>notFoundModules</code> argument is given, the method fills
      * the list with libraries that need to be retrieved first.
      * </p>
-     * 
+     *
      * @param libs
      * @param notFoundModules
      * @return true if all modules are available
@@ -535,30 +553,30 @@ public class Session
     /**
      * Helper method for the module resolution mechanism. It deals with an
      * individual module's resolution request.
-     * 
+     *
      * <p>
      * The method checks whether a given <em>single</em> <code>module</code> is
      * already accessible or needs to be retrieved first. In the latter case the
      * method returns <code>false</code>.
      * </p>
-     * 
+     *
      * <p>
      * The method traverses a <code>module<code>'s dependencies automatically.
      * </p>
-     * 
+     *
      * <p>
      * In order to find out whether a <code>module</code> is accessible the
      * method consults the list of downloaded libraries. If found, an entry to
      * the <code>modules</code> list is added.
      * </p>
-     * 
+     *
      * <p>
      * In case the <code>module</code> is not immediately accessible and the
      * <code>notFoundModules</code> argument exists, a list of available
      * libraries is consulted to fill a list of modules which yet need to be
      * retrieved.
      * </p>
-     * 
+     *
      * @param module
      * @param modules
      * @param notFoundModules
@@ -636,7 +654,7 @@ public class Session
 
     /**
      * Sorter for libraries.
-     * 
+     *
      * Hence the order in which the libraries have to be loaded is important, it
      * is necessary to sort them.
      */
@@ -650,7 +668,7 @@ public class Session
 
     /**
      * Helper class which allows manipulating libraries.
-     * 
+     *
      * It is similar to the {@link Library} class but has fewer fields.
      */
     static private class Module
