@@ -182,7 +182,7 @@ public class MinistroActivity extends Activity
     private boolean checkFreeSpace(final long size) throws InterruptedException
     {
         final StatFs stat = new StatFs(m_rootPath);
-        if (stat.getBlockSize() * stat.getAvailableBlocks() < size)
+        if (stat.getAvailableBlocks() < (size/stat.getBlockSize() + 1))
         {
             runOnUiThread(new Runnable()
             {
@@ -190,7 +190,7 @@ public class MinistroActivity extends Activity
                 {
 
                     AlertDialog.Builder builder = new AlertDialog.Builder(MinistroActivity.this);
-                    builder.setMessage(getResources().getString(R.string.ministro_disk_space_msg, (size - (stat.getBlockSize() * stat.getAvailableBlocks())) / 1024 + "Kb"));
+                    builder.setMessage(getResources().getString(R.string.ministro_disk_space_msg, (size/stat.getBlockSize() - stat.getAvailableBlocks()) * stat.getBlockSize() / 1024 + "Kb"));
                     builder.setCancelable(true);
                     builder.setNeutralButton(getResources().getString(R.string.settings_msg), new DialogInterface.OnClickListener()
                     {
@@ -240,7 +240,7 @@ public class MinistroActivity extends Activity
         else
             return true;
 
-        return stat.getBlockSize() * stat.getAvailableBlocks() > size;
+        return stat.getAvailableBlocks() > (size/stat.getBlockSize() + 1);
     }
 
     protected void onActivityResult(int requestCode, int resultCode, Intent data)
