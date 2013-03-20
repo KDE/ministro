@@ -13,7 +13,7 @@
 
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+*/
 
 package org.kde.necessitas.ministro;
 
@@ -118,8 +118,8 @@ public class MinistroConfigActivity extends Activity
                                                                                             // message
                                                                                             // title
         CharSequence contentText = getResources().getString(R.string.ministro_repository_changed_tap_msg); // expanded
-                                                                                                           // message
-                                                                                                           // text
+                                                                                                        // message
+                                                                                                        // text
 
         Intent notificationIntent = new Intent(this, MinistroActivity.class);
         PendingIntent contentIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);

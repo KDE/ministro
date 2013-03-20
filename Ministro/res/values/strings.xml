@@ -23,4 +23,5 @@
     <string name="extracting_look_n_feel_msg">Extracting the device look&amp;feel information. Please wait...</string>
     <string name="invalid_qt_version">Invalid Qt version</string>
     <string name="ministro_disk_space_msg">Not enough space to download required libraries.\nPlease free at least an additional %1$s of space.</string>
+    <string name="ministro_canceled">Canceled</string>
 </resources>

@@ -2,9 +2,6 @@ package org.kde.necessitas.ministro;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -34,6 +31,7 @@ public class Session
     private static final String REPOSITORY_KEY = "repository";
     private static final String MINIMUM_MINISTRO_API_KEY = "minimum.ministro.api";
     private static final String MINIMUM_QT_VERSION_KEY = "minimum.qt.version";
+    public static final String UPDATE_KEY = "update";
     // / Ministro server parameter keys
 
     // / loader parameter keys
@@ -55,7 +53,8 @@ public class Session
     private static final int EC_INCOMPATIBLE = 1;
     private static final int EC_NOT_FOUND = 2;
     private static final int EC_INVALID_PARAMETERS = 3;
-    private static final int EC_INVALID_QT_VERSION = 3;
+    private static final int EC_INVALID_QT_VERSION = 4;
+    private static final int EC_DOWNLOAD_CANCELED = 5;
     // / loader error codes
 
     // used to check Ministro Service compatibility
@@ -78,36 +77,36 @@ public class Session
     private SparseArray<HashMap<String, Library>> m_downloadedLibrariesMap = new SparseArray<HashMap<String, Library>>();
     private final HashMap<String, Library> m_availableLibraries = new HashMap<String, Library>();
 
-    private String m_ministroRootPath = null;
-
-    public Session(MinistroService service, IMinistroCallback callback, Bundle parameters) throws IOException
+    public Session(MinistroService service, IMinistroCallback callback, Bundle parameters)
     {
         m_service = service;
         m_callback = callback;
         m_parameters = parameters;
         m_sourcesIds = m_service.getSourcesIds(getSources());
-        m_ministroRootPath = m_service.getFilesDir().getCanonicalPath() + "/";
         m_pathSeparator = System.getProperty("path.separator", ":");
         long startTime = System.currentTimeMillis();
         refreshLibraries(false);
         long endTime = System.currentTimeMillis();
         Log.i(MinistroService.TAG, "refreshLibraries took " + (endTime - startTime) + " ms");
-        startTime = System.currentTimeMillis();
-        checkModulesImpl();
-        endTime = System.currentTimeMillis();
-        Log.i(MinistroService.TAG, "checkModulesImpl took " + (endTime - startTime) + " ms");
+        if (!parameters.getBoolean(UPDATE_KEY, false))
+        {
+            startTime = System.currentTimeMillis();
+            checkModulesImpl(true, null);
+            endTime = System.currentTimeMillis();
+            Log.i(MinistroService.TAG, "checkModulesImpl took " + (endTime - startTime) + " ms");
+        }
     }
 
     /**
-     * Implements the
-     * {@link IMinistro.Stub#checkModules(IMinistroCallback, String[], String, int, int)}
-     * service method.
-     *
-     * @param callback
-     * @param parameters
-     * @throws RemoteException
-     */
-    final void checkModulesImpl()
+    * Implements the
+    * {@link IMinistro.Stub#checkModules(IMinistroCallback, String[], String, int, int)}
+    * service method.
+    *
+    * @param callback
+    * @param parameters
+    * @throws RemoteException
+    */
+    final void checkModulesImpl(boolean downloadMissingLibs, Result res)
     {
         if (!m_parameters.containsKey(REQUIRED_MODULES_KEY) || !m_parameters.containsKey(APPLICATION_TITLE_KEY) || !m_parameters.containsKey(MINIMUM_MINISTRO_API_KEY)
                 || !m_parameters.containsKey(MINIMUM_QT_VERSION_KEY))
@@ -130,7 +129,7 @@ public class Session
 
         int qtApiLevel = m_parameters.getInt(MINIMUM_QT_VERSION_KEY);
         if (qtApiLevel > m_qtVersion) // the application needs a newer qt
-                                      // version
+                                    // version
         {
             if (m_parameters.getBoolean(QT_VERSION_PARAMETER_KEY, false))
             {
@@ -179,10 +178,16 @@ public class Session
 
         // this method is called by the activity client who needs modules.
         Bundle loaderParams = checkModules(null);
-        if (loaderParams.containsKey(ERROR_CODE_KEY) && EC_NO_ERROR == loaderParams.getInt(ERROR_CODE_KEY))
+        if (!downloadMissingLibs || (loaderParams.containsKey(ERROR_CODE_KEY) && EC_NO_ERROR == loaderParams.getInt(ERROR_CODE_KEY)))
         {
             try
             {
+                if (!downloadMissingLibs && res == Result.Canceled)
+                {
+                    loaderParams.putInt(ERROR_CODE_KEY, EC_DOWNLOAD_CANCELED);
+                    loaderParams.putString(ERROR_MESSAGE_KEY, m_service.getResources().getString(R.string.ministro_canceled));
+                }
+
                 Library.mergeBundleParameters(loaderParams, ENVIRONMENT_VARIABLES_KEY, m_parameters, ENVIRONMENT_VARIABLES_KEY);
                 Library.mergeBundleParameters(loaderParams, APPLICATION_PARAMETERS_KEY, m_parameters, APPLICATION_PARAMETERS_KEY);
                 m_callback.loaderReady(loaderParams);
@@ -234,16 +239,6 @@ public class Session
             }
         }
         return m_repository;
-    }
-
-    URL getVersionsFileUrl(Integer sourceId) throws MalformedURLException
-    {
-        return new URL(m_service.getSource(sourceId) + getRepository() + "/" + android.os.Build.CPU_ABI + "/android-" + android.os.Build.VERSION.SDK_INT + "/versions.xml");
-    }
-
-    URL getLibsXmlUrl(Integer sourceId, String version) throws MalformedURLException
-    {
-        return new URL(m_service.getSource(sourceId) + getRepository() + "/" + android.os.Build.CPU_ABI + "/android-" + android.os.Build.VERSION.SDK_INT + "/libs-" + version + ".xml");
     }
 
     String getApplicationName()
@@ -366,7 +361,7 @@ public class Session
                 m_availableLibraries.clear();
                 for (Integer sourceId : m_sourcesIds)
                 {
-                    File file = new File(getVersionXmlFile(sourceId));
+                    File file = new File(m_service.getVersionXmlFile(sourceId));
                     if (!file.exists())
                         continue;
 
@@ -386,11 +381,11 @@ public class Session
                     if (root.hasAttribute("environmentVariables"))
                     {
                         String environmentVariables = root.getAttribute("environmentVariables");
-                        environmentVariables = environmentVariables.replaceAll("MINISTRO_PATH", m_ministroRootPath);
-                        environmentVariables = environmentVariables.replaceAll("MINISTRO_SOURCE_ROOT_PATH", getLibsRootPath(sourceId));
+                        environmentVariables = environmentVariables.replaceAll("MINISTRO_PATH", m_service.getMinistroRootPath());
+                        environmentVariables = environmentVariables.replaceAll("MINISTRO_SOURCE_ROOT_PATH", m_service.getLibsRootPath(sourceId));
                         mergeEnvironmentVariables(environmentVariables);
-                        m_environmentVariables.put("MINISTRO_SSL_CERTS_PATH", m_ministroRootPath + "dl/ssl");
-                        m_environmentVariables.put("MINISTRO_ANDROID_STYLE_PATH", m_ministroRootPath + "dl/style");
+                        m_environmentVariables.put("MINISTRO_SSL_CERTS_PATH", m_service.getMinistroSslRootPath());
+                        m_environmentVariables.put("MINISTRO_ANDROID_STYLE_PATH", m_service.getMinistroStyleRootPath());
                     }
                     if (root.hasAttribute("qtVersion"))
                         m_qtVersion = Integer.valueOf(root.getAttribute("qtVersion"));
@@ -398,16 +393,16 @@ public class Session
                     if (!root.hasAttribute("flags"))
                     { // fix env vars
                         if (m_environmentVariables.containsKey("QML_IMPORT_PATH"))
-                            m_environmentVariables.put("QML_IMPORT_PATH", getLibsRootPath(sourceId) + "imports");
+                            m_environmentVariables.put("QML_IMPORT_PATH", m_service.getLibsRootPath(sourceId) + "imports");
 
                         if (m_environmentVariables.containsKey("QT_PLUGIN_PATH"))
-                            m_environmentVariables.put("QT_PLUGIN_PATH", getLibsRootPath(sourceId) + "plugins");
+                            m_environmentVariables.put("QT_PLUGIN_PATH", m_service.getLibsRootPath(sourceId) + "plugins");
                     }
                     root.normalize();
                     Node node = root.getFirstChild();
 
                     HashMap<String, Library> downloadedLibraries = new HashMap<String, Library>();
-                    loadLibs(node, getLibsRootPath(sourceId), sourceId, m_availableLibraries, downloadedLibraries, false);
+                    loadLibs(node, m_service.getLibsRootPath(sourceId), sourceId, m_availableLibraries, downloadedLibraries, false);
                     m_downloadedLibraries.putAll(downloadedLibraries);
                     m_downloadedLibrariesMap.put(sourceId, downloadedLibraries);
                 }
@@ -423,16 +418,6 @@ public class Session
                 e.printStackTrace();
             }
         }
-    }
-
-    public String getVersionXmlFile(Integer sourceId)
-    {
-        return m_ministroRootPath + "xml/" + sourceId + ".xml";
-    }
-
-    public String getLibsRootPath(Integer sourceId)
-    {
-        return m_ministroRootPath + "dl/" + sourceId + "/";
     }
 
     private SparseArray<Double> m_versions = new SparseArray<Double>();
@@ -457,56 +442,33 @@ public class Session
     }
 
     /**
-     * Helper method for the last step of the retrieval process.
-     *
-     * <p>
-     * Checks the availability of the requested modules and informs the
-     * requesting application about it via the {@link IMinistroCallback}
-     * instance.
-     * </p>
-     *
-     */
+    * Helper method for the last step of the retrieval process.
+    *
+    * <p>
+    * Checks the availability of the requested modules and informs the
+    * requesting application about it via the {@link IMinistroCallback}
+    * instance.
+    * </p>
+    *
+    */
     void retrievalFinished(Result res)
     {
-        // Does a final check whether the libraries are accessible (without
-        // caring for
-        // the non-accessible ones).
-        try
-        {
-            // FIXME
-            // if (null != action.modules)
-            // {
-            // Bundle loaderParams = checkModules(action.modules, null);
-            // Library.mergeBundleParameters(loaderParams,
-            // ENVIRONMENT_VARIABLES_KEY, action.parameters,
-            // ENVIRONMENT_VARIABLES_KEY);
-            // Library.mergeBundleParameters(loaderParams,
-            // APPLICATION_PARAMETERS_KEY, action.parameters,
-            // APPLICATION_PARAMETERS_KEY);
-            // m_callback.loaderReady(loaderParams);
-            // }
-            // else
-            checkModulesImpl();
-        }
-        catch (Exception e)
-        {
-            e.printStackTrace();
-        }
+        checkModulesImpl(false, res);
     }
 
     /**
-     * Checks whether a given list of libraries are readily accessible (e.g.
-     * usable by a program).
-     *
-     * <p>
-     * If the <code>notFoundModules</code> argument is given, the method fills
-     * the list with libraries that need to be retrieved first.
-     * </p>
-     *
-     * @param libs
-     * @param notFoundModules
-     * @return true if all modules are available
-     */
+    * Checks whether a given list of libraries are readily accessible (e.g.
+    * usable by a program).
+    *
+    * <p>
+    * If the <code>notFoundModules</code> argument is given, the method fills
+    * the list with libraries that need to be retrieved first.
+    * </p>
+    *
+    * @param libs
+    * @param notFoundModules
+    * @return true if all modules are available
+    */
     Bundle checkModules(HashMap<String, Library> notFoundModules)
     {
         Bundle params = new Bundle();
@@ -532,7 +494,7 @@ public class Session
         params.putString(LOADER_CLASS_NAME_KEY, m_loaderClassName);
         try
         {
-            params.putString(LIB_PATH_KEY, getLibsRootPath(m_sourcesIds.get(0)));
+            params.putString(LIB_PATH_KEY, m_service.getLibsRootPath(m_sourcesIds.get(0)));
         }
         catch (Exception e)
         {
@@ -540,7 +502,7 @@ public class Session
         }
         ArrayList<String> paths = new ArrayList<String>();
         for (Integer id : m_sourcesIds)
-            paths.add(getLibsRootPath(id));
+            paths.add(m_service.getLibsRootPath(id));
         params.putStringArrayList(LIBS_PATH_KEY, paths);
         params.putString(ENVIRONMENT_VARIABLES_KEY, joinEnvironmentVariables());
         params.putString(APPLICATION_PARAMETERS_KEY, Library.join(m_applicationParams, "\t"));
@@ -551,39 +513,39 @@ public class Session
     }
 
     /**
-     * Helper method for the module resolution mechanism. It deals with an
-     * individual module's resolution request.
-     *
-     * <p>
-     * The method checks whether a given <em>single</em> <code>module</code> is
-     * already accessible or needs to be retrieved first. In the latter case the
-     * method returns <code>false</code>.
-     * </p>
-     *
-     * <p>
-     * The method traverses a <code>module<code>'s dependencies automatically.
-     * </p>
-     *
-     * <p>
-     * In order to find out whether a <code>module</code> is accessible the
-     * method consults the list of downloaded libraries. If found, an entry to
-     * the <code>modules</code> list is added.
-     * </p>
-     *
-     * <p>
-     * In case the <code>module</code> is not immediately accessible and the
-     * <code>notFoundModules</code> argument exists, a list of available
-     * libraries is consulted to fill a list of modules which yet need to be
-     * retrieved.
-     * </p>
-     *
-     * @param module
-     * @param modules
-     * @param notFoundModules
-     * @param jars
-     * @return <code>true</code> if the given module and all its dependencies
-     *         are readily available.
-     */
+    * Helper method for the module resolution mechanism. It deals with an
+    * individual module's resolution request.
+    *
+    * <p>
+    * The method checks whether a given <em>single</em> <code>module</code> is
+    * already accessible or needs to be retrieved first. In the latter case the
+    * method returns <code>false</code>.
+    * </p>
+    *
+    * <p>
+    * The method traverses a <code>module<code>'s dependencies automatically.
+    * </p>
+    *
+    * <p>
+    * In order to find out whether a <code>module</code> is accessible the
+    * method consults the list of downloaded libraries. If found, an entry to
+    * the <code>modules</code> list is added.
+    * </p>
+    *
+    * <p>
+    * In case the <code>module</code> is not immediately accessible and the
+    * <code>notFoundModules</code> argument exists, a list of available
+    * libraries is consulted to fill a list of modules which yet need to be
+    * retrieved.
+    * </p>
+    *
+    * @param module
+    * @param modules
+    * @param notFoundModules
+    * @param jars
+    * @return <code>true</code> if the given module and all its dependencies
+    *         are readily available.
+    */
     private boolean addModules(String module, ArrayList<Module> modules, HashMap<String, Library> notFoundModules, Set<String> jars)
     {
         // Module argument is not supposed to be null at this point.
@@ -608,12 +570,12 @@ public class Session
         {
             Module m = new Module();
             m.name = library.name;
-            m.path = getLibsRootPath(library.sourceId) + library.filePath;
+            m.path = m_service.getLibsRootPath(library.sourceId) + library.filePath;
             m.level = library.level;
             if (library.needs != null)
                 for (NeedsStruct needed : library.needs)
                     if (needed.type != null && needed.type.equals("jar"))
-                        jars.add(getLibsRootPath(library.sourceId) + needed.filePath);
+                        jars.add(m_service.getLibsRootPath(library.sourceId) + needed.filePath);
             modules.add(m);
 
             boolean res = true;
@@ -653,11 +615,11 @@ public class Session
     }
 
     /**
-     * Sorter for libraries.
-     *
-     * Hence the order in which the libraries have to be loaded is important, it
-     * is necessary to sort them.
-     */
+    * Sorter for libraries.
+    *
+    * Hence the order in which the libraries have to be loaded is important, it
+    * is necessary to sort them.
+    */
     static private class ModuleCompare implements Comparator<Module>
     {
         public int compare(Module a, Module b)
@@ -667,10 +629,10 @@ public class Session
     }
 
     /**
-     * Helper class which allows manipulating libraries.
-     *
-     * It is similar to the {@link Library} class but has fewer fields.
-     */
+    * Helper class which allows manipulating libraries.
+    *
+    * It is similar to the {@link Library} class but has fewer fields.
+    */
     static private class Module
     {
         String path;
@@ -706,7 +668,7 @@ public class Session
         try
         {
             HashMap<String, Library> oldLibs = m_downloadedLibrariesMap.get(sourceId);
-            File file = new File(getVersionXmlFile(sourceId));
+            File file = new File(m_service.getVersionXmlFile(sourceId));
             if (!file.exists() || oldLibs == null)
                 return null;
 
@@ -718,9 +680,9 @@ public class Session
             Node node = root.getFirstChild();
 
             HashMap<String, Library> newLibraries = new HashMap<String, Library>();
-            loadLibs(node, getLibsRootPath(sourceId), sourceId, newLibraries, null, false);
+            loadLibs(node, m_service.getLibsRootPath(sourceId), sourceId, newLibraries, null, false);
             HashMap<String, Library> changedLibs = new HashMap<String, Library>();
-            String rootPath = getLibsRootPath(sourceId);
+            String rootPath = m_service.getLibsRootPath(sourceId);
 
             for (String library : oldLibs.keySet())
             {
@@ -779,10 +741,5 @@ public class Session
             env += key + "=" + m_environmentVariables.get(key);
         }
         return env;
-    }
-
-    public void createSourcePah(Integer sourceId)
-    {
-        Library.mkdirParents(m_ministroRootPath, "dl/" + sourceId, 0);
     }
 }

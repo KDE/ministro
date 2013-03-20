@@ -13,25 +13,40 @@
 
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+*/
 
 package org.kde.necessitas.ministro;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileReader;
+import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -50,9 +65,11 @@ public class MinistroService extends Service
 
     private HashMap<String, Integer> m_sources = new HashMap<String, Integer>();
     private String m_repository = null;
-    private long m_checkUpdates = 0;
+    private long m_lastCheckUpdates = 0;
     private long m_checkFrequency = 7l * 24 * 3600 * 1000; // 7 days
     private int m_nextId = 0;
+    private String m_ministroRootPath = null;
+
 
     public String getRepository()
     {
@@ -67,7 +84,7 @@ public class MinistroService extends Service
         synchronized (this)
         {
             m_repository = value;
-            m_checkUpdates = 0;
+            m_lastCheckUpdates = 0;
             saveSettings();
         }
     }
@@ -76,7 +93,7 @@ public class MinistroService extends Service
     {
         synchronized (this)
         {
-            return m_checkFrequency;
+            return m_checkFrequency / (24 * 3600 * 1000);
         }
     }
 
@@ -84,8 +101,8 @@ public class MinistroService extends Service
     {
         synchronized (this)
         {
-            m_checkFrequency = value;
-            m_checkUpdates = 0;
+            m_checkFrequency = value * 24 * 3600 * 1000;
+            m_lastCheckUpdates = 0;
             saveSettings();
         }
     }
@@ -109,63 +126,141 @@ public class MinistroService extends Service
 
     private SparseArray<Session> m_sessions = new SparseArray<Session>();
 
-    // class CheckForUpdates extends AsyncTask<Void, Void, Void>
-    // {
-    // @Override
-    // protected void onPreExecute()
-    // {
-    // if
-    // (m_version<MinistroActivity.downloadVersionXmlFile(MinistroService.this,
-    // true))
-    // {
-    // NotificationManager nm = (NotificationManager)
-    // getSystemService(Context.NOTIFICATION_SERVICE);
-    //
-    // int icon = R.drawable.icon;
-    // CharSequence tickerText =
-    // getResources().getString(R.string.new_qt_libs_msg); // ticker-text
-    // long when = System.currentTimeMillis(); // notification time
-    // Context context = getApplicationContext(); // application Context
-    // CharSequence contentTitle =
-    // getResources().getString(R.string.ministro_update_msg); // expanded
-    // message title
-    // CharSequence contentText =
-    // getResources().getString(R.string.new_qt_libs_tap_msg); // expanded
-    // message text
-    //
-    // Intent notificationIntent = new Intent(MinistroService.this,
-    // MinistroActivity.class);
-    // PendingIntent contentIntent =
-    // PendingIntent.getActivity(MinistroService.this, 0, notificationIntent,
-    // 0);
-    //
-    // // the next two lines initialize the Notification, using the
-    // configurations above
-    // Notification notification = new Notification(icon, tickerText, when);
-    // notification.setLatestEventInfo(context, contentTitle, contentText,
-    // contentIntent);
-    // notification.defaults |= Notification.DEFAULT_SOUND;
-    // notification.defaults |= Notification.DEFAULT_LIGHTS;
-    // try {
-    // nm.notify(1, notification);
-    // } catch(Exception e) {
-    // e.printStackTrace();
-    // }
-    // }
-    // }
-    //
-    // @Override
-    // protected Void doInBackground(Void... params) {
-    // return null;
-    // }
-    // }
+    class CheckForUpdates extends AsyncTask<Void, Void, Boolean>
+    {
+        private double getLocalVersion(Integer sourceId) throws Exception
+        {
+            File file = new File(getVersionXmlFile(sourceId));
+            if (!file.exists())
+                return -1;
 
+            DocumentBuilderFactory documentFactory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder documentBuilder = documentFactory.newDocumentBuilder();
+            Document dom = documentBuilder.parse(new FileInputStream(file));
+            Element root = dom.getDocumentElement();
+            return Double.valueOf(root.getAttribute("version"));
+        }
+
+        private double getRemoteVersion(Integer sourceId) throws Exception
+        {
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder builder = factory.newDocumentBuilder();
+            Document dom = null;
+            Element root = null;
+            URLConnection connection = getVersionsFileUrl(sourceId).openConnection();
+            connection.setConnectTimeout(MinistroActivity.CONNECTION_TIMEOUT);
+            connection.setReadTimeout(MinistroActivity.READ_TIMEOUT);
+            dom = builder.parse(connection.getInputStream());
+            root = dom.getDocumentElement();
+            root.normalize();
+            return Double.valueOf(root.getAttribute("latest"));
+        }
+        @Override
+        protected Boolean doInBackground(Void... params)
+        {
+            boolean res = false;
+            for (Integer sourceId : m_sources.values())
+            {
+                try
+                {
+                    double localVersion = getLocalVersion(sourceId);
+                    if (localVersion > 0 && localVersion != getRemoteVersion(sourceId))
+                        res = true;
+                }
+                catch (Exception e)
+                {
+                    e.printStackTrace();
+                }
+            }
+            return res;
+        }
+
+        @Override
+        protected void onPostExecute(Boolean result)
+        {
+            if (!result)
+                return;
+
+            NotificationManager nm = (NotificationManager)
+                    getSystemService(Context.NOTIFICATION_SERVICE);
+
+            int icon = R.drawable.icon;
+            CharSequence tickerText = getResources().getString(R.string.new_qt_libs_msg); // ticker-text
+            long when = System.currentTimeMillis(); // notification time
+            Context context = getApplicationContext(); // application Context
+            CharSequence contentTitle = getResources().getString(R.string.ministro_update_msg); // expanded message title
+            CharSequence contentText = getResources().getString(R.string.new_qt_libs_tap_msg); // expanded message text
+
+            Intent notificationIntent = new Intent(MinistroService.this,
+                    MinistroActivity.class);
+            PendingIntent contentIntent = PendingIntent.getActivity(MinistroService.this, 0, notificationIntent, 0);
+
+            // the next two lines initialize the Notification, using the configurations above
+            Notification notification = new Notification(icon, tickerText, when);
+            notification.setLatestEventInfo(context, contentTitle, contentText, contentIntent);
+            notification.defaults |= Notification.DEFAULT_SOUND;
+            notification.defaults |= Notification.DEFAULT_LIGHTS;
+            try {
+                nm.notify(1, notification);
+            } catch(Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public String getMinistroRootPath()
+    {
+        return m_ministroRootPath;
+    }
+
+    public String getMinistroSslRootPath()
+    {
+        return m_ministroRootPath + "dl/ssl";
+    }
+
+    public String getMinistroStyleRootPath()
+    {
+        return m_ministroRootPath + "dl/style";
+    }
+
+    public String getVersionXmlFile(Integer sourceId)
+    {
+        return m_ministroRootPath + "xml/" + sourceId + ".xml";
+    }
+
+    public String getLibsRootPath(Integer sourceId)
+    {
+        return m_ministroRootPath + "dl/" + sourceId + "/";
+    }
+
+    URL getVersionsFileUrl(Integer sourceId) throws MalformedURLException
+    {
+        return new URL(getSource(sourceId) + getRepository() + "/" + android.os.Build.CPU_ABI + "/android-" + android.os.Build.VERSION.SDK_INT + "/versions.xml");
+    }
+
+    URL getLibsXmlUrl(Integer sourceId, String version) throws MalformedURLException
+    {
+        return new URL(getSource(sourceId) + getRepository() + "/" + android.os.Build.CPU_ABI + "/android-" + android.os.Build.VERSION.SDK_INT + "/libs-" + version + ".xml");
+    }
+
+
+    public void createSourcePath(Integer sourceId)
+    {
+        Library.mkdirParents(m_ministroRootPath, "dl/" + sourceId, 0);
+    }
+
+    public Session getUpdateSession()
+    {
+        Bundle params = new Bundle();
+        params.putBoolean(Session.UPDATE_KEY, true);
+        return null;
+    }
     /**
-     * Creates and sets up a {@link MinistroActivity} to retrieve the modules
-     * specified in the <code>session</code> argument.
-     * 
-     * @param session
-     */
+    * Creates and sets up a {@link MinistroActivity} to retrieve the modules
+    * specified in the <code>session</code> argument.
+    *
+    * @param session
+    */
 
     synchronized public void startRetrieval(Session session)
     {
@@ -212,12 +307,12 @@ public class MinistroService extends Service
     }
 
     /**
-     * Called by a finished {@link MinistroActivity} in order to let the service
-     * notify the application which caused the activity about the result of the
-     * retrieval.
-     * 
-     * @param id
-     */
+    * Called by a finished {@link MinistroActivity} in order to let the service
+    * notify the application which caused the activity about the result of the
+    * retrieval.
+    *
+    * @param id
+    */
     void retrievalFinished(int id, Session.Result res)
     {
 
@@ -284,7 +379,7 @@ public class MinistroService extends Service
                     line = reader.readLine();
                 }
                 JSONObject json = new JSONObject(builder.toString());
-                m_checkUpdates = json.getLong(MINISTRO_CHECK_UPDATES_KEY);
+                m_lastCheckUpdates = json.getLong(MINISTRO_CHECK_UPDATES_KEY);
                 m_checkFrequency = json.getLong(MINISTRO_CHECK_FREQUENCY_KEY);
                 m_repository = json.getString(MINISTRO_REPOSITORY_KEY);
                 JSONArray sources = json.getJSONArray(MINISTRO_SOURCES_KEY);
@@ -313,7 +408,7 @@ public class MinistroService extends Service
             try
             {
                 JSONObject json = new JSONObject();
-                json.put(MINISTRO_CHECK_UPDATES_KEY, m_checkUpdates);
+                json.put(MINISTRO_CHECK_UPDATES_KEY, m_lastCheckUpdates);
                 json.put(MINISTRO_CHECK_FREQUENCY_KEY, m_checkFrequency);
                 json.put(MINISTRO_REPOSITORY_KEY, m_repository);
                 JSONArray sources = new JSONArray();
@@ -337,7 +432,7 @@ public class MinistroService extends Service
         }
     }
 
-    void migrateSettings()
+    private void migrateSettings()
     {
         try
         {
@@ -345,7 +440,7 @@ public class MinistroService extends Service
             SharedPreferences preferences = getSharedPreferences("Ministro", MODE_PRIVATE);
             m_repository = preferences.getString(MINISTRO_REPOSITORY_KEY, MINISTRO_DEFAULT_REPOSITORY);
             m_checkFrequency = preferences.getLong(MINISTRO_CHECK_FREQUENCY_KEY, 7l * 24 * 3600 * 1000);
-            m_checkUpdates = preferences.getLong(MINISTRO_CHECK_UPDATES_KEY, 0);
+            m_lastCheckUpdates = preferences.getLong(MINISTRO_CHECK_UPDATES_KEY, 0);//System.currentTimeMillis());
             SharedPreferences.Editor editor = preferences.edit();
             editor.remove(MINISTRO_REPOSITORY_KEY);
             editor.remove(MINISTRO_CHECK_FREQUENCY_KEY);
@@ -378,32 +473,23 @@ public class MinistroService extends Service
     public void onCreate()
     {
         m_handler = new Handler();
+        try {
+            m_ministroRootPath = getFilesDir().getCanonicalPath() + "/";
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         SharedPreferences preferences = getSharedPreferences("Ministro", MODE_PRIVATE);
         if (!preferences.getBoolean(MINISTRO_MIGRATED_KEY, false))
             migrateSettings();
         else
             loadSettings();
 
-        // m_versionXmlFile = getFilesDir().getAbsolutePath()+"/version.xml";
-        // m_qtLibsRootPath = getFilesDir().getAbsolutePath()+"/qt/";
-        // m_pathSeparator = System.getProperty("path.separator", ":");
-        // SharedPreferences preferences=getSharedPreferences("Ministro",
-        // MODE_PRIVATE);
-        // long lastCheck = preferences.getLong(MINISTRO_CHECK_UPDATES_KEY,0);
-        // long checkFrequency =
-        // preferences.getLong(MINISTRO_CHECK_FREQUENCY_KEY,7l*24*3600*1000); //
-        // check once per week by default
-        // if (MinistroActivity.isOnline(this) &&
-        // System.currentTimeMillis()-lastCheck>checkFrequency)
-        // {
-        // refreshLibraries(true);
-        // SharedPreferences.Editor editor= preferences.edit();
-        // editor.putLong(MINISTRO_CHECK_UPDATES_KEY,System.currentTimeMillis());
-        // editor.commit();
-        // new CheckForUpdates().execute((Void[])null);
-        // }
-        // else
-        // refreshLibraries(false);
+        if (MinistroActivity.isOnline(this) && System.currentTimeMillis() - m_lastCheckUpdates > m_checkFrequency)
+        {
+            m_lastCheckUpdates = System.currentTimeMillis();
+            saveSettings();
+            new CheckForUpdates().execute((Void[])null);
+        }
         super.onCreate();
     }
 
@@ -422,7 +508,8 @@ public class MinistroService extends Service
             {
                 try
                 {
-                    new Session(MinistroService.this, callback, parameters);
+                    if (m_ministroRootPath != null)
+                        new Session(MinistroService.this, callback, parameters);
                 }
                 catch (Exception e)
                 {

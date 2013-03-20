@@ -13,7 +13,7 @@
 
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+*/
 
 package org.kde.necessitas.ministro;
 
@@ -76,10 +76,10 @@ import android.util.Log;
 public class MinistroActivity extends Activity
 {
     // 20 seconds for connection timeout
-    private static final int CONNECTION_TIMEOUT = 20000;
+    public static final int CONNECTION_TIMEOUT = 20000;
 
     // 10 seconds for read timeout
-    private static final int READ_TIMEOUT = 10000;
+    public static final int READ_TIMEOUT = 10000;
 
     public native static int nativeChmode(String filepath, int mode);
 
@@ -302,7 +302,10 @@ public class MinistroActivity extends Activity
                     }
                 }
                 else
+                {
                     m_id = -1;
+                    m_session = MinistroService.instance().getUpdateSession();
+                }
             }
             else
                 checkNetworkAndDownload(true);
@@ -379,7 +382,7 @@ public class MinistroActivity extends Activity
             DocumentBuilder builder = factory.newDocumentBuilder();
             Document dom = null;
             Element root = null;
-            URLConnection connection = m_session.getVersionsFileUrl(sourceId).openConnection();
+            URLConnection connection = MinistroService.instance().getVersionsFileUrl(sourceId).openConnection();
             connection.setConnectTimeout(CONNECTION_TIMEOUT);
             connection.setReadTimeout(READ_TIMEOUT);
             dom = builder.parse(connection.getInputStream());
@@ -395,8 +398,8 @@ public class MinistroActivity extends Activity
             String supportedFeatures = null;
             if (root.hasAttribute("features"))
                 supportedFeatures = root.getAttribute("features");
-            connection = m_session.getLibsXmlUrl(sourceId, version + deviceSupportedFeatures(supportedFeatures)).openConnection();
-            String xmlFilePath = m_session.getVersionXmlFile(sourceId);
+            connection = MinistroService.instance().getLibsXmlUrl(sourceId, version + deviceSupportedFeatures(supportedFeatures)).openConnection();
+            String xmlFilePath = MinistroService.instance().getVersionXmlFile(sourceId);
             new File(xmlFilePath).delete();
             FileOutputStream outstream = new FileOutputStream(xmlFilePath);
             InputStream instream = connection.getInputStream();
@@ -406,7 +409,7 @@ public class MinistroActivity extends Activity
                 outstream.write(tmp, 0, downloaded);
 
             outstream.close();
-            m_session.createSourcePah(sourceId);
+            MinistroService.instance().createSourcePath(sourceId);
             return version;
         }
         catch (ClientProtocolException e)
@@ -547,7 +550,7 @@ public class MinistroActivity extends Activity
                         m_status = params[i].name + " ";
                     }
                     publishProgress(0, m_totalProgressSize);
-                    String rootPath = m_session.getLibsRootPath(params[i].sourceId);
+                    String rootPath = MinistroService.instance().getLibsRootPath(params[i].sourceId);
                     if (!DownloadItem(params[i].url, rootPath, params[i].filePath, params[i].size, params[i].sha1))
                         break;
 
@@ -621,7 +624,7 @@ public class MinistroActivity extends Activity
                 m_dialog = null;
             }
             m_session.refreshLibraries(false);
-            finishMe(Session.Result.Canceled);
+            finishMe(Session.Result.Completed);
         }
     }
 
