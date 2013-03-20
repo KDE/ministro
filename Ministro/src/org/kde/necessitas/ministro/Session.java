@@ -85,7 +85,7 @@ public class Session
         m_sourcesIds = m_service.getSourcesIds(getSources());
         m_pathSeparator = System.getProperty("path.separator", ":");
         long startTime = System.currentTimeMillis();
-        refreshLibraries(false);
+        refreshLibraries(m_service.checkCrc());
         long endTime = System.currentTimeMillis();
         Log.i(MinistroService.TAG, "refreshLibraries took " + (endTime - startTime) + " ms");
         if (!parameters.getBoolean(UPDATE_KEY, false))
@@ -402,7 +402,7 @@ public class Session
                     Node node = root.getFirstChild();
 
                     HashMap<String, Library> downloadedLibraries = new HashMap<String, Library>();
-                    loadLibs(node, m_service.getLibsRootPath(sourceId), sourceId, m_availableLibraries, downloadedLibraries, false);
+                    loadLibs(node, m_service.getLibsRootPath(sourceId), sourceId, m_availableLibraries, downloadedLibraries, checkCrc);
                     m_downloadedLibraries.putAll(downloadedLibraries);
                     m_downloadedLibrariesMap.put(sourceId, downloadedLibraries);
                 }

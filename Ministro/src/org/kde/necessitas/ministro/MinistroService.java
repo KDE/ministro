@@ -62,6 +62,7 @@ public class MinistroService extends Service
     private static final String MINISTRO_MIGRATED_KEY = "MIGRATED";
     private static final String MINISTRO_DEFAULT_REPOSITORY = "stable";
     private static final String MINISTRO_SOURCES_KEY = "SOURCES";
+    private static final String MINISTRO_CHECK_CRC_KEY = "CHECK_CRC";
 
     private HashMap<String, Integer> m_sources = new HashMap<String, Integer>();
     private String m_repository = null;
@@ -69,6 +70,7 @@ public class MinistroService extends Service
     private long m_checkFrequency = 7l * 24 * 3600 * 1000; // 7 days
     private int m_nextId = 0;
     private String m_ministroRootPath = null;
+    private boolean m_checkCrc = true;
 
 
     public String getRepository()
@@ -77,6 +79,11 @@ public class MinistroService extends Service
         {
             return m_repository;
         }
+    }
+
+    public boolean checkCrc()
+    {
+        return m_checkCrc;
     }
 
     public void setRepository(String value)
@@ -484,6 +491,14 @@ public class MinistroService extends Service
         else
             loadSettings();
 
+        m_checkCrc = preferences.getBoolean(MINISTRO_CHECK_CRC_KEY, true);
+        if (!m_checkCrc)
+        {
+            SharedPreferences.Editor editor = preferences.edit();
+            editor.putBoolean(MINISTRO_CHECK_CRC_KEY, true);
+            editor.commit();
+        }
+
         if (MinistroActivity.isOnline(this) && System.currentTimeMillis() - m_lastCheckUpdates > m_checkFrequency)
         {
             m_lastCheckUpdates = System.currentTimeMillis();
@@ -496,6 +511,10 @@ public class MinistroService extends Service
     @Override
     public void onDestroy()
     {
+        SharedPreferences preferences = getSharedPreferences("Ministro", MODE_PRIVATE);
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.putBoolean(MINISTRO_CHECK_CRC_KEY, false);
+        editor.commit();
         super.onDestroy();
     }
 
