@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2011, BogDan Vatra <bog_dan_ro@yahoo.com>
+    Copyright (c) 2011-20013, BogDan Vatra <bogdan@kde.org>
 
     Redistribution and use in source and binary forms, with or without
     modification, are permitted provided that the following conditions

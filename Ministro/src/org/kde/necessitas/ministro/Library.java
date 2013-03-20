@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2011, BogDan Vatra <bog_dan_ro@yahoo.com>
+    Copyright (c) 2011-20013, BogDan Vatra <bogdan@kde.org>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
