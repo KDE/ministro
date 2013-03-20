@@ -37,11 +37,13 @@ interface IMinistro
 * param parameters
 *            parameters fields:
 *                 * Key Name                   Key type         Explanations
+*                   "sources"                  StringArray      Sources list from where Ministro will download the libs. Make sure you are using ONLY secure locations.
+*                   "repository"               String           Overwrites the default Ministro repository. Possible values: default, stable, testing and unstable
 *                   "required.modules"         StringArray      Required modules by your application
 *                   "application.title"        String           Application name, used to show more informations to user
 *                   "qt.provider"              String           Qt libs provider, currently only "necessitas" is supported.
-*                   "minimum.ministro.api"     Integer          Minimum Ministro API level, used to check if Ministro service compatible with your application. Current API Level is 1 !
-*                   "minimum.qt.version"       Integer          Minimim Qt version (e.g. 0x040800, which means Qt 4.8.0, check http://doc.trolltech.com/4.8/qtglobal.html#QT_VERSION)!
+*                   "minimum.ministro.api"     Integer          Minimum Ministro API level, used to check if Ministro service compatible with your application. Current API Level is 3 !
+*                   "minimum.qt.version"       Integer          Minimim Qt version (e.g. 0x040800, which means Qt 4.8.0, check http://qt-project.org/doc/qt-4.8/qtglobal.html#QT_VERSION)!
 */
     void requestLoader(in IMinistroCallback callback, in Bundle parameters);
 }

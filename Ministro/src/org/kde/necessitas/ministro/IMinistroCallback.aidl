@@ -44,8 +44,10 @@ oneway interface IMinistroCallback {
 *  - 1 incompatible Ministro version. Ministro needs to be upgraded.
 *  - 2 not all modules could be satisfy.
 *  - 3 invalid parameters
+*  - 4 invalid qt version
+*  - 5 download canceled
 *
-* This parameter will contain additional fields which are used by the loader to start your application, so it must be passed to loader.
+* The parameter contains additional fields which are used by the loader to start your application, so it must be passed to the loader.
 */
 
     void loaderReady(in Bundle loaderParams);
