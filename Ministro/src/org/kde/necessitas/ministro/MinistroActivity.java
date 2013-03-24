@@ -302,13 +302,14 @@ public class MinistroActivity extends Activity
                     }
                 }
                 else
-                {
                     m_id = -1;
-                    m_session = MinistroService.instance().getUpdateSession();
-                }
             }
             else
+            {
+                m_id = -1;
+                m_session = MinistroService.instance().getUpdateSession();
                 checkNetworkAndDownload(true);
+            }
         }
 
         public void onServiceDisconnected(ComponentName name)

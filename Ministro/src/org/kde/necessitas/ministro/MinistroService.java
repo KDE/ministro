@@ -260,7 +260,7 @@ public class MinistroService extends Service
     {
         Bundle params = new Bundle();
         params.putBoolean(Session.UPDATE_KEY, true);
-        return null;
+        return new Session(this, null, params);
     }
     /**
     * Creates and sets up a {@link MinistroActivity} to retrieve the modules

@@ -667,17 +667,19 @@ public class Session
         {
             e.printStackTrace();
         }
-        for (NeedsStruct n : lib.needs)
-        {
-            try
+
+        if (lib.needs != null)
+            for (NeedsStruct n : lib.needs)
             {
-                new File(rootPath + n.filePath).delete();
+                try
+                {
+                    new File(rootPath + n.filePath).delete();
+                }
+                catch (Exception e)
+                {
+                    e.printStackTrace();
+                }
             }
-            catch (Exception e)
-            {
-                e.printStackTrace();
-            }
-        }
     }
 
     synchronized public HashMap<String, Library> getChangedLibraries(Integer sourceId)
