@@ -622,6 +622,7 @@ public class Session
             library = m_availableLibraries.get(module);
             if (library != null)
             {
+                Log.i(MinistroService.TAG, "Module '"+ module + "' not found");
                 notFoundModules.put(module, library);
                 if (library.depends != null)
                     for (int depIt = 0; depIt < library.depends.length; depIt++)

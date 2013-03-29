@@ -262,17 +262,12 @@ public class MinistroService extends Service
         params.putBoolean(Session.UPDATE_KEY, true);
         return new Session(this, null, params);
     }
-    /**
-    * Creates and sets up a {@link MinistroActivity} to retrieve the modules
-    * specified in the <code>session</code> argument.
-    *
-    * @param session
-    */
 
-    synchronized public void startRetrieval(Session session)
+    private void startActivity()
     {
-        int id = m_actionId++;
-        m_sessions.put(id, session);
+        if (0 == m_sessions.size())
+            return;
+        int id = m_sessions.keyAt(0);
         final Intent intent = new Intent(MinistroService.this, MinistroActivity.class);
         intent.putExtra("id", id);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -297,20 +292,45 @@ public class MinistroService extends Service
             // Removes the dead Activity from our list as it will never finish
             // by itself.
             if (failed)
-            {
-                m_sessions.remove(id);
-                if (0 == m_sessions.size())
-                    id = 0;
-            }
+                retrievalFinished(id, Session.Result.Canceled);
+        }
+    }
+
+    private void showActivity()
+    {
+        Intent intent = new Intent(MinistroService.this, MinistroActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(intent);
+    }
+    /**
+    * Creates and sets up a {@link MinistroActivity} to retrieve the modules
+    * specified in the <code>session</code> argument.
+    *
+    * @param session
+    */
+
+    public void startRetrieval(Session session)
+    {
+        synchronized (this)
+        {
+            int id = m_actionId++;
+            boolean startActivity = m_sessions.size() == 0;
+            m_sessions.put(id, session);
+            if (startActivity)
+                startActivity();
+            else
+                showActivity();
         }
     }
 
     public Session getSession(int id)
     {
-        if (m_sessions.indexOfKey(id) >= 0)
-            return m_sessions.get(id);
-
-        return null;
+        synchronized (this)
+        {
+            if (m_sessions.indexOfKey(id) >= 0)
+                return m_sessions.get(id);
+            return null;
+        }
     }
 
     /**
@@ -322,13 +342,17 @@ public class MinistroService extends Service
     */
     void retrievalFinished(int id, Session.Result res)
     {
-
-        if (m_sessions.indexOfKey(id) >= 0)
+        synchronized (this)
         {
-            m_sessions.get(id).retrievalFinished(res);
-            m_sessions.remove(id);
-            if (m_sessions.size() == 0)
-                m_actionId = 0;
+            if (m_sessions.indexOfKey(id) >= 0)
+            {
+                m_sessions.get(id).retrievalFinished(res);
+                m_sessions.remove(id);
+                if (m_sessions.size() == 0)
+                    m_actionId = 0;
+                else
+                    startActivity();
+            }
         }
     }
 
@@ -345,10 +369,13 @@ public class MinistroService extends Service
             boolean saveSettings = false;
             for (String source : sources)
             {
+                if (!source.endsWith("/"))
+                    source += "/";
                 if (!m_sources.containsKey(source))
                 {
                     m_sources.put(source, m_nextId);
                     ids.add(m_nextId++);
+                    saveSettings = true;
                 }
                 else
                     ids.add(m_sources.get(source));
