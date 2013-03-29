@@ -105,6 +105,8 @@ class Library
                 need.size = Long.valueOf(lib.getAttribute("size"));
                 if (lib.hasAttribute("type"))
                     need.type = lib.getAttribute("type");
+                if (lib.hasAttribute("initClass"))
+                    need.initClass = lib.getAttribute("initClass");
                 needs.add(need);
             }
         }
@@ -285,5 +287,6 @@ class NeedsStruct
     public String sha1 = null;
     public String url = null;
     public String type = null;
+    public String initClass = null;
     public long size = 0;
 };

@@ -58,6 +58,7 @@ public class Session
     private static final String LIB_PATH_KEY = "lib.path";
     private static final String LIBS_PATH_KEY = "libs.path";
     private static final String LOADER_CLASS_NAME_KEY = "loader.class.name";
+    private static final String STATIC_INIT_CLASSES_KEY = "static.init.classes";
 
     private static final String NATIVE_LIBRARIES_KEY = "native.libraries";
     private static final String ENVIRONMENT_VARIABLES_KEY = "environment.variables";
@@ -492,9 +493,10 @@ public class Session
         boolean res = true;
         ArrayList<Module> libs = new ArrayList<Module>();
         Set<String> jars = new HashSet<String>();
+        ArrayList<String> initClasses = new ArrayList<String>();
         for (String module : m_parameters.getStringArray(REQUIRED_MODULES_KEY))
             // don't stop on first error
-            res = res & addModules(module, libs, notFoundModules, jars);
+            res = res & addModules(module, libs, notFoundModules, jars, initClasses);
 
         ArrayList<String> librariesArray = new ArrayList<String>();
         // sort all libraries
@@ -509,6 +511,9 @@ public class Session
 
         params.putString(DEX_PATH_KEY, Library.join(jarsArray, m_pathSeparator));
         params.putString(LOADER_CLASS_NAME_KEY, m_loaderClassName);
+        if (initClasses.size() > 0)
+            params.putStringArray(STATIC_INIT_CLASSES_KEY, initClasses.toArray(new String[initClasses.size()]));
+
         try
         {
             params.putString(LIB_PATH_KEY, m_service.getLibsRootPath(m_sourcesIds.get(0)));
@@ -563,7 +568,7 @@ public class Session
     * @return <code>true</code> if the given module and all its dependencies
     *         are readily available.
     */
-    private boolean addModules(String module, ArrayList<Module> modules, HashMap<String, Library> notFoundModules, Set<String> jars)
+    private boolean addModules(String module, ArrayList<Module> modules, HashMap<String, Library> notFoundModules, Set<String> jars, ArrayList<String> initClasses)
     {
         // Module argument is not supposed to be null at this point.
         if (modules == null)
@@ -591,14 +596,18 @@ public class Session
             m.level = library.level;
             if (library.needs != null)
                 for (NeedsStruct needed : library.needs)
+                {
                     if (needed.type != null && needed.type.equals("jar"))
                         jars.add(m_service.getLibsRootPath(library.sourceId) + needed.filePath);
+                    if (needed.initClass != null)
+                        initClasses.add(needed.initClass);
+                }
             modules.add(m);
 
             boolean res = true;
             if (library.depends != null)
                 for (String depend : library.depends)
-                    res &= addModules(depend, modules, notFoundModules, jars);
+                    res &= addModules(depend, modules, notFoundModules, jars, initClasses);
 
             if (library.replaces != null)
                 for (String replaceLibrary : library.replaces)
@@ -626,7 +635,7 @@ public class Session
                 notFoundModules.put(module, library);
                 if (library.depends != null)
                     for (int depIt = 0; depIt < library.depends.length; depIt++)
-                        addModules(library.depends[depIt], modules, notFoundModules, jars);
+                        addModules(library.depends[depIt], modules, notFoundModules, jars, initClasses);
             }
         }
         return false;
