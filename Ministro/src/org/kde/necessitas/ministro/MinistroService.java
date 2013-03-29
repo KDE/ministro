@@ -263,11 +263,11 @@ public class MinistroService extends Service
         return new Session(this, null, params);
     }
 
-    private void startActivity()
+    private void startActivity(boolean refreshLibs)
     {
-        if (0 == m_sessions.size())
-            return;
         int id = m_sessions.keyAt(0);
+        if (refreshLibs)
+            getSession(id).refreshLibraries(false);
         final Intent intent = new Intent(MinistroService.this, MinistroActivity.class);
         intent.putExtra("id", id);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -317,7 +317,7 @@ public class MinistroService extends Service
             boolean startActivity = m_sessions.size() == 0;
             m_sessions.put(id, session);
             if (startActivity)
-                startActivity();
+                startActivity(false);
             else
                 showActivity();
         }
@@ -351,7 +351,7 @@ public class MinistroService extends Service
                 if (m_sessions.size() == 0)
                     m_actionId = 0;
                 else
-                    startActivity();
+                    startActivity(true);
             }
         }
     }
