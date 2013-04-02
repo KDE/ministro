@@ -302,13 +302,19 @@ public class MinistroActivity extends Activity
                     }
                 }
                 else
+                {
                     m_id = -1;
+                    finishMe(Session.Result.Canceled);
+                }
             }
             else
             {
                 m_id = -1;
                 m_session = MinistroService.instance().getUpdateSession();
-                checkNetworkAndDownload(true);
+                if (m_session != null)
+                    checkNetworkAndDownload(true);
+                else
+                    finish();
             }
         }
 
@@ -400,7 +406,7 @@ public class MinistroActivity extends Activity
             if (root.hasAttribute("features"))
                 supportedFeatures = root.getAttribute("features");
             connection = MinistroService.instance().getLibsXmlUrl(sourceId, version + deviceSupportedFeatures(supportedFeatures)).openConnection();
-            String xmlFilePath = MinistroService.instance().getVersionXmlFile(sourceId);
+            String xmlFilePath = MinistroService.instance().getVersionXmlFile(sourceId, m_session.getRepository());
             new File(xmlFilePath).delete();
             FileOutputStream outstream = new FileOutputStream(xmlFilePath);
             InputStream instream = connection.getInputStream();
@@ -410,7 +416,7 @@ public class MinistroActivity extends Activity
                 outstream.write(tmp, 0, downloaded);
 
             outstream.close();
-            MinistroService.instance().createSourcePath(sourceId);
+            MinistroService.instance().createSourcePath(sourceId, m_session.getRepository());
             return version;
         }
         catch (ClientProtocolException e)
@@ -551,7 +557,7 @@ public class MinistroActivity extends Activity
                         m_status = params[i].name + " ";
                     }
                     publishProgress(0, m_totalProgressSize);
-                    String rootPath = MinistroService.instance().getLibsRootPath(params[i].sourceId);
+                    String rootPath = MinistroService.instance().getLibsRootPath(params[i].sourceId, m_session.getRepository());
                     if (!DownloadItem(params[i].url, rootPath, params[i].filePath, params[i].size, params[i].sha1))
                         break;
 

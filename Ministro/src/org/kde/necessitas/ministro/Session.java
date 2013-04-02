@@ -100,7 +100,13 @@ public class Session
         m_service = service;
         m_callback = callback;
         m_parameters = parameters;
-        m_sourcesIds = m_service.getSourcesIds(getSources());
+        if (!parameters.getBoolean(UPDATE_KEY, false))
+            m_sourcesIds = m_service.getSourcesIds(getSources());
+        else
+        {
+            m_sourcesIds = new ArrayList<Integer>();
+            m_sourcesIds.addAll(m_service.getAllSourcesIds());
+        }
         m_pathSeparator = System.getProperty("path.separator", ":");
         long startTime = System.currentTimeMillis();
         refreshLibraries(m_service.checkCrc());
@@ -356,14 +362,17 @@ public class Session
 
         lib.touched = true;
         lib.level = 0;
-        for (String dep : lib.depends)
+        if (lib.depends != null)
         {
-            Library l = m_downloadedLibraries.get(dep);
-            if (l != null)
+            for (String dep : lib.depends)
             {
-                setLoadPriority(l);
-                if (lib.level <= l.level)
-                    lib.level = l.level + 1;
+                Library l = m_downloadedLibraries.get(dep);
+                if (l != null)
+                {
+                    setLoadPriority(l);
+                    if (lib.level <= l.level)
+                        lib.level = l.level + 1;
+                }
             }
         }
     }
@@ -379,7 +388,7 @@ public class Session
                 m_availableLibraries.clear();
                 for (Integer sourceId : m_sourcesIds)
                 {
-                    File file = new File(m_service.getVersionXmlFile(sourceId));
+                    File file = new File(m_service.getVersionXmlFile(sourceId, getRepository()));
                     if (!file.exists())
                         continue;
 
@@ -400,7 +409,7 @@ public class Session
                     {
                         String environmentVariables = root.getAttribute("environmentVariables");
                         environmentVariables = environmentVariables.replaceAll("MINISTRO_PATH", m_service.getMinistroRootPath());
-                        environmentVariables = environmentVariables.replaceAll("MINISTRO_SOURCE_ROOT_PATH", m_service.getLibsRootPath(sourceId));
+                        environmentVariables = environmentVariables.replaceAll("MINISTRO_SOURCE_ROOT_PATH", m_service.getLibsRootPath(sourceId, getRepository()));
                         mergeEnvironmentVariables(environmentVariables);
                         m_environmentVariables.put("MINISTRO_SSL_CERTS_PATH", m_service.getMinistroSslRootPath());
                         m_environmentVariables.put("MINISTRO_ANDROID_STYLE_PATH", m_service.getMinistroStyleRootPath());
@@ -411,16 +420,16 @@ public class Session
                     if (!root.hasAttribute("flags"))
                     { // fix env vars
                         if (m_environmentVariables.containsKey("QML_IMPORT_PATH"))
-                            m_environmentVariables.put("QML_IMPORT_PATH", m_service.getLibsRootPath(sourceId) + "imports");
+                            m_environmentVariables.put("QML_IMPORT_PATH", m_service.getLibsRootPath(sourceId, getRepository()) + "imports");
 
                         if (m_environmentVariables.containsKey("QT_PLUGIN_PATH"))
-                            m_environmentVariables.put("QT_PLUGIN_PATH", m_service.getLibsRootPath(sourceId) + "plugins");
+                            m_environmentVariables.put("QT_PLUGIN_PATH", m_service.getLibsRootPath(sourceId, getRepository()) + "plugins");
                     }
                     root.normalize();
                     Node node = root.getFirstChild();
 
                     HashMap<String, Library> downloadedLibraries = new HashMap<String, Library>();
-                    loadLibs(node, m_service.getLibsRootPath(sourceId), sourceId, m_availableLibraries, downloadedLibraries, checkCrc);
+                    loadLibs(node, m_service.getLibsRootPath(sourceId, getRepository()), sourceId, m_availableLibraries, downloadedLibraries, checkCrc);
                     m_downloadedLibraries.putAll(downloadedLibraries);
                     m_downloadedLibrariesMap.put(sourceId, downloadedLibraries);
                 }
@@ -516,7 +525,7 @@ public class Session
 
         try
         {
-            params.putString(LIB_PATH_KEY, m_service.getLibsRootPath(m_sourcesIds.get(0)));
+            params.putString(LIB_PATH_KEY, m_service.getLibsRootPath(m_sourcesIds.get(0), getRepository()));
         }
         catch (Exception e)
         {
@@ -524,7 +533,7 @@ public class Session
         }
         ArrayList<String> paths = new ArrayList<String>();
         for (Integer id : m_sourcesIds)
-            paths.add(m_service.getLibsRootPath(id));
+            paths.add(m_service.getLibsRootPath(id, getRepository()));
         params.putStringArrayList(LIBS_PATH_KEY, paths);
         params.putString(ENVIRONMENT_VARIABLES_KEY, joinEnvironmentVariables());
         params.putString(APPLICATION_PARAMETERS_KEY, Library.join(m_applicationParams, "\t"));
@@ -592,13 +601,13 @@ public class Session
         {
             Module m = new Module();
             m.name = library.name;
-            m.path = m_service.getLibsRootPath(library.sourceId) + library.filePath;
+            m.path = m_service.getLibsRootPath(library.sourceId, getRepository()) + library.filePath;
             m.level = library.level;
             if (library.needs != null)
                 for (NeedsStruct needed : library.needs)
                 {
                     if (needed.type != null && needed.type.equals("jar"))
-                        jars.add(m_service.getLibsRootPath(library.sourceId) + needed.filePath);
+                        jars.add(m_service.getLibsRootPath(library.sourceId, getRepository()) + needed.filePath);
                     if (needed.initClass != null)
                         initClasses.add(needed.initClass);
                 }
@@ -697,7 +706,7 @@ public class Session
         try
         {
             HashMap<String, Library> oldLibs = m_downloadedLibrariesMap.get(sourceId);
-            File file = new File(m_service.getVersionXmlFile(sourceId));
+            File file = new File(m_service.getVersionXmlFile(sourceId, getRepository()));
             if (!file.exists() || oldLibs == null)
                 return null;
 
@@ -709,29 +718,62 @@ public class Session
             Node node = root.getFirstChild();
 
             HashMap<String, Library> newLibraries = new HashMap<String, Library>();
-            loadLibs(node, m_service.getLibsRootPath(sourceId), sourceId, newLibraries, null, false);
+            loadLibs(node, m_service.getLibsRootPath(sourceId, getRepository()), sourceId, newLibraries, null, false);
             HashMap<String, Library> changedLibs = new HashMap<String, Library>();
-            String rootPath = m_service.getLibsRootPath(sourceId);
+            String rootPath = m_service.getLibsRootPath(sourceId, getRepository());
 
             for (String library : oldLibs.keySet())
             {
                 Library newLib = newLibraries.get(library);
-                if (newLib != null)
-                    changedLibs.put(library, newLib);
-                cleanLibrary(rootPath, oldLibs.get(library));
-                // TODO Check the sha1 of this library and of the needed files
+                Library oldLib = oldLibs.get(library);
+                // Check the sha1 of this library and of the needed files
                 // to see if we really need to download something
-                // if (newLib == null)
-                // {
-                // // the new libraries list doesn't contain this library
-                // anymore, so we must remove it with all its needed files
-                // cleanLibrary(rootPath, oldLibs.get(library));
-                // continue;
-                // }
-                // // we must check the sha1 check sum of the both files.
-                // boolean changed = false;
-                // if (!newLib.sha1.equals(oldLibs.get(library).sha1))
-                // changed = true;
+                 if (newLib == null)
+                 {
+                     // the new libraries list doesn't contain this library
+                     // anymore, so we must remove it with all its needed files
+                     cleanLibrary(rootPath, oldLib);
+                     continue;
+                 }
+                 // we must check the sha1 check sum of the both files.
+                 boolean changed = false;
+                 if (!newLib.sha1.equals(oldLib.sha1))
+                     changed = true;
+                 else
+                 {
+                     // the lib doesn't have any needed files
+                     if (newLib.needs == null && oldLib.needs == null)
+                         continue;
+
+                     if ((newLib.needs == null && oldLib.needs != null) || (newLib.needs != null && oldLib.needs == null) || newLib.needs.length != oldLib.needs.length)
+                         changed = true;
+                     else
+                     {
+                         for (NeedsStruct newNeedsStruct : newLib.needs)
+                         {
+                            boolean found = false;
+                            for (NeedsStruct oldNeedsStruct : oldLib.needs)
+                            {
+                                if (newNeedsStruct.name.equals(oldNeedsStruct.name) && newNeedsStruct.sha1.equals(oldNeedsStruct.sha1))
+                                {
+                                    found = true;
+                                    break;
+                                }
+                            }
+                            if (!found)
+                            {
+                                changed = true;
+                                break;
+                            }
+                         }
+                     }
+                 }
+
+                 if (changed)
+                 {
+                     cleanLibrary(rootPath, oldLibs.get(library));
+                     changedLibs.put(library + "_" + sourceId, newLib);
+                 }
             }
             return changedLibs;
         }

@@ -137,7 +137,7 @@ public class MinistroService extends Service
     {
         private double getLocalVersion(Integer sourceId) throws Exception
         {
-            File file = new File(getVersionXmlFile(sourceId));
+            File file = new File(getVersionXmlFile(sourceId, m_repository));
             if (!file.exists())
                 return -1;
 
@@ -230,14 +230,14 @@ public class MinistroService extends Service
         return m_ministroRootPath + "dl/style";
     }
 
-    public String getVersionXmlFile(Integer sourceId)
+    public String getVersionXmlFile(Integer sourceId, String repository)
     {
-        return m_ministroRootPath + "xml/" + sourceId + ".xml";
+        return m_ministroRootPath + "xml/" + sourceId + "_" + repository + ".xml";
     }
 
-    public String getLibsRootPath(Integer sourceId)
+    public String getLibsRootPath(Integer sourceId, String repository)
     {
-        return m_ministroRootPath + "dl/" + sourceId + "/";
+        return m_ministroRootPath + "dl/" + sourceId + "/" + repository + "/";
     }
 
     URL getVersionsFileUrl(Integer sourceId) throws MalformedURLException
@@ -251,16 +251,25 @@ public class MinistroService extends Service
     }
 
 
-    public void createSourcePath(Integer sourceId)
+    public void createSourcePath(Integer sourceId, String repository)
     {
-        Library.mkdirParents(m_ministroRootPath, "dl/" + sourceId, 0);
+        Library.mkdirParents(m_ministroRootPath, "dl/" + sourceId+ "/" + repository, 0);
     }
 
     public Session getUpdateSession()
     {
-        Bundle params = new Bundle();
-        params.putBoolean(Session.UPDATE_KEY, true);
-        return new Session(this, null, params);
+        synchronized (this)
+        {
+            if (m_sessions.size() == 0)
+            {
+                Bundle params = new Bundle();
+                params.putBoolean(Session.UPDATE_KEY, true);
+                Session session = new Session(this, null, params);
+                m_sessions.put(m_actionId++, session);
+                return session;
+            }
+            return null;
+        }
     }
 
     private void startActivity(boolean refreshLibs)
@@ -488,11 +497,11 @@ public class MinistroService extends Service
             if (new File(rootPath + "version.xml").exists())
             {
                 m_sources.put(Session.NECESSITAS_SOURCE[0], m_nextId);
-                new File(rootPath + "version.xml").renameTo(new File(rootPath + "xml/" + m_nextId + ".xml"));
-                Library.mkdirParents(rootPath, "dl", 0);
+                new File(rootPath + "version.xml").renameTo(new File(rootPath + "xml/" + m_nextId + "_" + m_repository + ".xml"));
                 new File(rootPath + "qt/style").renameTo(new File(rootPath  + "dl/style"));
                 new File(rootPath + "qt/ssl").renameTo(new File(rootPath  + "dl/ssl"));
-                new File(rootPath + "qt").renameTo(new File(rootPath  + "dl/" + m_nextId));
+                Library.mkdirParents(rootPath, "dl/"+ m_nextId, 0);
+                new File(rootPath + "qt").renameTo(new File(rootPath  + "dl/" + m_nextId + "/" + m_repository));
                 m_nextId++;
             }
             saveSettings();
@@ -563,5 +572,10 @@ public class MinistroService extends Service
                 }
             }
         };
+    }
+
+    public Collection<Integer> getAllSourcesIds()
+    {
+        return m_sources.values();
     }
 }
