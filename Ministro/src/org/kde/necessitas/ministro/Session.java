@@ -796,8 +796,7 @@ public class Session
         for (String envPair : environmentVariables.split("\t"))
         {
             int pos = envPair.indexOf('=');
-            if (pos > 0 && pos + 2 < envPair.length())
-                // TODO Check me !!!
+            if (pos > 0 && pos + 1 < envPair.length())
                 m_environmentVariables.put(envPair.substring(0, pos), envPair.substring(pos + 1));
         }
     }
