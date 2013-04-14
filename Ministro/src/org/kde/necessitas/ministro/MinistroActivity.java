@@ -88,9 +88,9 @@ public class MinistroActivity extends Activity
     private String m_rootPath = null;
     private WakeLock m_wakeLock = null;
 
-    private void checkNetworkAndDownload(final boolean update)
+    private void checkNetworkAndDownload(final boolean update, boolean checkOnline)
     {
-        if (isOnline(this))
+        if (!checkOnline || isOnline(this))
             new CheckLibraries().execute(update);
         else
         {
@@ -273,32 +273,39 @@ public class MinistroActivity extends Activity
                 m_session = MinistroService.instance().getSession(m_id);
                 if (m_session != null)
                 {
-                    AlertDialog.Builder builder = new AlertDialog.Builder(MinistroActivity.this);
-                    builder.setMessage(getResources().getString(R.string.download_app_libs_msg, m_session.getApplicationName())).setCancelable(false)
-                            .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener()
-                            {
-                                public void onClick(DialogInterface dialog, int id)
-                                {
-                                    dialog.dismiss();
-                                    checkNetworkAndDownload(false);
-                                }
-                            }).setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener()
-                            {
-                                public void onClick(DialogInterface dialog, int id)
-                                {
-                                    dialog.cancel();
-                                    finishMe(Session.Result.Canceled);
-                                }
-                            });
-                    AlertDialog alert = builder.create();
-                    try
+                    if (m_session.onlyExtractStyleAndSsl())
                     {
-                        alert.show();
+                        checkNetworkAndDownload(false, false);
                     }
-                    catch (Exception e)
+                    else
                     {
-                        e.printStackTrace();
-                        checkNetworkAndDownload(false);
+                        AlertDialog.Builder builder = new AlertDialog.Builder(MinistroActivity.this);
+                        builder.setMessage(getResources().getString(R.string.download_app_libs_msg, m_session.getApplicationName())).setCancelable(false)
+                                .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener()
+                                {
+                                    public void onClick(DialogInterface dialog, int id)
+                                    {
+                                        dialog.dismiss();
+                                        checkNetworkAndDownload(false, true);
+                                    }
+                                }).setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener()
+                                {
+                                    public void onClick(DialogInterface dialog, int id)
+                                    {
+                                        dialog.cancel();
+                                        finishMe(Session.Result.Canceled);
+                                    }
+                                });
+                        AlertDialog alert = builder.create();
+                        try
+                        {
+                            alert.show();
+                        }
+                        catch (Exception e)
+                        {
+                            e.printStackTrace();
+                            checkNetworkAndDownload(false, true);
+                        }
                     }
                 }
                 else
@@ -312,7 +319,7 @@ public class MinistroActivity extends Activity
                 m_id = -1;
                 m_session = MinistroService.instance().getUpdateSession();
                 if (m_session != null)
-                    checkNetworkAndDownload(true);
+                    checkNetworkAndDownload(true, true);
                 else
                     finish();
             }
@@ -750,6 +757,9 @@ public class MinistroActivity extends Activity
                     editor.putString("RELEASE", android.os.Build.VERSION.RELEASE);
                     editor.commit();
                 }
+
+                if (m_session.onlyExtractStyleAndSsl())
+                    return false;
 
                 boolean refreshLibraries = false;
                 for (Integer sourceId : m_session.getSourcesIds())

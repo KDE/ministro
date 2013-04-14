@@ -222,12 +222,12 @@ public class MinistroService extends Service
 
     public String getMinistroSslRootPath()
     {
-        return m_ministroRootPath + "dl/ssl";
+        return m_ministroRootPath + "dl/ssl/";
     }
 
     public String getMinistroStyleRootPath()
     {
-        return m_ministroRootPath + "dl/style";
+        return m_ministroRootPath + "dl/style/";
     }
 
     public String getVersionXmlFile(Integer sourceId, String repository)
@@ -435,6 +435,26 @@ public class MinistroService extends Service
                     if (id >= m_nextId)
                         m_nextId = id + 1;
                     m_sources.put(s.getString("url"), id);
+                    try
+                    {
+                        String path = getLibsRootPath(id, m_repository);
+                        File f = new File(path + "style");
+                        if (f.exists())
+                        {
+                            Library.removeAllFiles(path + "style");
+                            f.delete();
+                        }
+                        f = new File(path + "ssl");
+                        if (f.exists())
+                        {
+                            Library.removeAllFiles(path + "ssl");
+                            f.delete();
+                        }
+                    }
+                    catch(Exception e)
+                    {
+                        e.printStackTrace();
+                    }
                 }
             }
             catch (Exception e)
@@ -498,8 +518,6 @@ public class MinistroService extends Service
             {
                 m_sources.put(Session.NECESSITAS_SOURCE[0], m_nextId);
                 new File(rootPath + "version.xml").renameTo(new File(rootPath + "xml/" + m_nextId + "_" + m_repository + ".xml"));
-                new File(rootPath + "qt/style").renameTo(new File(rootPath  + "dl/style"));
-                new File(rootPath + "qt/ssl").renameTo(new File(rootPath  + "dl/ssl"));
                 Library.mkdirParents(rootPath, "dl/"+ m_nextId, 0);
                 new File(rootPath + "qt").renameTo(new File(rootPath  + "dl/" + m_nextId + "/" + m_repository));
                 m_nextId++;

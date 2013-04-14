@@ -95,6 +95,13 @@ public class Session
     private SparseArray<HashMap<String, Library>> m_downloadedLibrariesMap = new SparseArray<HashMap<String, Library>>();
     private final HashMap<String, Library> m_availableLibraries = new HashMap<String, Library>();
 
+    private boolean m_onlyExtractStyleAndSsl = false;
+
+    boolean onlyExtractStyleAndSsl()
+    {
+        return m_onlyExtractStyleAndSsl;
+    }
+
     public Session(MinistroService service, IMinistroCallback callback, Bundle parameters)
     {
         m_service = service;
@@ -202,7 +209,8 @@ public class Session
 
         // this method is called by the activity client who needs modules.
         Bundle loaderParams = checkModules(null);
-        if (!downloadMissingLibs || (loaderParams.containsKey(ERROR_CODE_KEY) && EC_NO_ERROR == loaderParams.getInt(ERROR_CODE_KEY)))
+        m_onlyExtractStyleAndSsl = !new File(m_service.getMinistroSslRootPath()).exists() || !new File(m_service.getMinistroStyleRootPath()).exists();
+        if (!m_onlyExtractStyleAndSsl && (!downloadMissingLibs || (loaderParams.containsKey(ERROR_CODE_KEY) && EC_NO_ERROR == loaderParams.getInt(ERROR_CODE_KEY))))
         {
             try
             {
@@ -225,6 +233,7 @@ public class Session
         {
             // Starts a retrieval of the modules which are not readily
             // accessible.
+            m_onlyExtractStyleAndSsl &= loaderParams.containsKey(ERROR_CODE_KEY) && EC_NO_ERROR == loaderParams.getInt(ERROR_CODE_KEY);
             m_service.startRetrieval(this);
         }
     }
