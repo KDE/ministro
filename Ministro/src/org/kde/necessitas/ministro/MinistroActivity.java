@@ -396,7 +396,7 @@ public class MinistroActivity extends Activity
             DocumentBuilder builder = factory.newDocumentBuilder();
             Document dom = null;
             Element root = null;
-            URLConnection connection = MinistroService.instance().getVersionsFileUrl(sourceId).openConnection();
+            URLConnection connection = m_session.getVersionsFileUrl(sourceId).openConnection();
             connection.setConnectTimeout(CONNECTION_TIMEOUT);
             connection.setReadTimeout(READ_TIMEOUT);
             dom = builder.parse(connection.getInputStream());
@@ -412,7 +412,7 @@ public class MinistroActivity extends Activity
             String supportedFeatures = null;
             if (root.hasAttribute("features"))
                 supportedFeatures = root.getAttribute("features");
-            connection = MinistroService.instance().getLibsXmlUrl(sourceId, version + deviceSupportedFeatures(supportedFeatures)).openConnection();
+            connection = m_session.getLibsXmlUrl(sourceId, version + deviceSupportedFeatures(supportedFeatures)).openConnection();
             String xmlFilePath = MinistroService.instance().getVersionXmlFile(sourceId, m_session.getRepository());
             new File(xmlFilePath).delete();
             FileOutputStream outstream = new FileOutputStream(xmlFilePath);

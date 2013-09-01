@@ -19,6 +19,8 @@ package org.kde.necessitas.ministro;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -284,6 +286,16 @@ public class Session
     String getApplicationName()
     {
         return m_parameters.getString(APPLICATION_TITLE_KEY);
+    }
+
+    URL getVersionsFileUrl(Integer sourceId) throws MalformedURLException
+    {
+        return new URL(m_service.getSource(sourceId) + getRepository() + "/" + android.os.Build.CPU_ABI + "/android-" + android.os.Build.VERSION.SDK_INT + "/versions.xml");
+    }
+
+    URL getLibsXmlUrl(Integer sourceId, String version) throws MalformedURLException
+    {
+        return new URL(m_service.getSource(sourceId) + getRepository() + "/" + android.os.Build.CPU_ABI + "/android-" + android.os.Build.VERSION.SDK_INT + "/libs-" + version + ".xml");
     }
 
     static void loadLibs(Node node, String rootPath, Integer sourceId, HashMap<String, Library> availableLibraries, HashMap<String, Library> downloadedLibraries, boolean checkCRC)

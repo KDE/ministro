@@ -243,14 +243,9 @@ public class MinistroService extends Service
         return m_ministroRootPath + "dl/" + sourceId + "/" + repository + "/";
     }
 
-    URL getVersionsFileUrl(Integer sourceId) throws MalformedURLException
+    private URL getVersionsFileUrl(Integer sourceId) throws MalformedURLException
     {
         return new URL(getSource(sourceId) + getRepository() + "/" + android.os.Build.CPU_ABI + "/android-" + android.os.Build.VERSION.SDK_INT + "/versions.xml");
-    }
-
-    URL getLibsXmlUrl(Integer sourceId, String version) throws MalformedURLException
-    {
-        return new URL(getSource(sourceId) + getRepository() + "/" + android.os.Build.CPU_ABI + "/android-" + android.os.Build.VERSION.SDK_INT + "/libs-" + version + ".xml");
     }
 
 
