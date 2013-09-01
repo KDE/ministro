@@ -670,18 +670,65 @@ public class MinistroActivity extends Activity
             {
                 SharedPreferences preferences = getSharedPreferences("Ministro", MODE_PRIVATE);
                 boolean systemUpdate = !preferences.getString("CODENAME", "").equals(android.os.Build.VERSION.CODENAME)
-                        || !preferences.getString("INCREMENTAL", "").equals(android.os.Build.VERSION.INCREMENTAL) || !preferences.getString("RELEASE", "").equals(android.os.Build.VERSION.RELEASE);
+                        || !preferences.getString("INCREMENTAL", "").equals(android.os.Build.VERSION.INCREMENTAL)
+                        || !preferences.getString("RELEASE", "").equals(android.os.Build.VERSION.RELEASE);
                 // extract device look&feel
-                if (systemUpdate || !preferences.getString("MINISTRO_VERSION", "").equals(getPackageManager().getPackageInfo(getPackageName(), 0).versionName)
-                        || !(new File(m_rootPath + "style").exists()))
+                String _style = "style/" + getResources().getDisplayMetrics().densityDpi;
+                if (systemUpdate || !preferences.getString(Session.MINISTRO_VERSION, "").equals(getPackageManager().getPackageInfo(getPackageName(), 0).versionName)
+                        || !(new File(m_rootPath + _style).exists()) || !(new File(m_rootPath + "/style/style.json").exists()))
                 {
                     m_message = getResources().getString(R.string.extracting_look_n_feel_msg);
                     publishProgress(m_message);
-                    String path = Library.mkdirParents(m_rootPath, "style", 0);
+                    if (!(new File(m_rootPath + "/style/style.json").exists()))
+                    {
+                        String path = Library.mkdirParents(m_rootPath, "/style", 0);
+                        Library.removeAllFiles(path); // clean old files
+
+                        // Extract default (dark) theme
+                        setTheme(android.R.style.Theme);
+                        new ExtractStyle(MinistroActivity.this, path);
+                    }
+
+                    String path = Library.mkdirParents(m_rootPath, _style, 0);
                     Library.removeAllFiles(path); // clean old files
+
+                    // Extract default (dark) theme
+                    setTheme(android.R.style.Theme);
                     new ExtractStyle(MinistroActivity.this, path);
+
+                    String stylePath = path;
+                    // Extract default light theme
+                    path = Library.mkdirParents(stylePath, "light", 0);
+                    setTheme(android.R.style.Theme_Light);
+                    new ExtractStyle(MinistroActivity.this, path);
+
+                    // on API-11+ extract holo and holo light themes
+                    if (Build.VERSION.SDK_INT >= 14) {
+                        path = Library.mkdirParents(stylePath, "deviceDefault", 0);
+                        setTheme(android.R.style.Theme_DeviceDefault);
+                        new ExtractStyle(MinistroActivity.this, path);
+
+                        path = Library.mkdirParents(stylePath, "deviceDefault_light", 0);
+                        setTheme(android.R.style.Theme_DeviceDefault_Light);
+                        new ExtractStyle(MinistroActivity.this, path);
+                    }
+                    else
+                    {
+                        if (Build.VERSION.SDK_INT >= 11) {
+                            path = Library.mkdirParents(stylePath, "deviceDefault", 0);
+                            setTheme(android.R.style.Theme_Holo);
+                            new ExtractStyle(MinistroActivity.this, path);
+
+                            path = Library.mkdirParents(stylePath, "deviceDefault_light", 0);
+                            setTheme(android.R.style.Theme_Holo_Light);
+                            new ExtractStyle(MinistroActivity.this, path);
+                        }
+                    }
+
+                    setTheme(android.R.style.Theme);
+
                     SharedPreferences.Editor editor = preferences.edit();
-                    editor.putString("MINISTRO_VERSION", getPackageManager().getPackageInfo(getPackageName(), 0).versionName);
+                    editor.putString(Session.MINISTRO_VERSION, getPackageManager().getPackageInfo(getPackageName(), 0).versionName);
                     editor.commit();
                 }
 

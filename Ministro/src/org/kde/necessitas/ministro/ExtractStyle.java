@@ -48,6 +48,7 @@ import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.GradientDrawable.Orientation;
 import android.graphics.drawable.LayerDrawable;
 import android.graphics.drawable.NinePatchDrawable;
+import android.graphics.drawable.ScaleDrawable;
 import android.graphics.drawable.StateListDrawable;
 import android.os.Build;
 import android.util.AttributeSet;
@@ -223,7 +224,8 @@ public class ExtractStyle {
     final Resources.Theme m_theme;
     final String m_extractPath;
     Context m_context;
-
+    final int defaultBackgroundColor;
+    final int defaultTextColor;
 
     class FakeCanvas extends Canvas {
         int[] chunkData= null;
@@ -347,9 +349,9 @@ public class ExtractStyle {
     final int [] DrawableStates ={android.R.attr.state_active, android.R.attr.state_checked
                                 , android.R.attr.state_enabled, android.R.attr.state_focused
                                 , android.R.attr.state_pressed, android.R.attr.state_selected
-                                , android.R.attr.state_window_focused, 16908288};
-    final String[] DrawableStatesLabels = {"active", "checked", "enabled", "focused", "pressed", "selected", "window_focused", "backdroud"};
-    final String[] DisableDrawableStatesLabels = {"inactive", "unchecked", "disabled", "not_focused", "no_pressed", "unselected", "window_not_focused", "backdroud"};
+                                , android.R.attr.state_window_focused, 16908288, 16843597, 16843518};
+    final String[] DrawableStatesLabels = {"active", "checked", "enabled", "focused", "pressed", "selected", "window_focused", "background", "multiline", "activated"};
+    final String[] DisableDrawableStatesLabels = {"inactive", "unchecked", "disabled", "not_focused", "no_pressed", "unselected", "window_not_focused", "background", "multiline", "activated"};
 
     String getFileName(String file, String[] states)
     {
@@ -405,7 +407,7 @@ public class ExtractStyle {
     {
         int n;
         for(n= 0;u > 0;++n, u&= (u - 1));
-        return n;
+            return n;
     }
 
     Object getStateListDrawable_old(Drawable drawable, String filename)
@@ -633,7 +635,7 @@ public class ExtractStyle {
     public JSONObject getDrawable(Object drawable, String filename)
     {
         JSONObject json = new JSONObject();
-        Bitmap bmp = null;
+        Bitmap bmp;
         if (drawable instanceof Bitmap)
             bmp = (Bitmap) drawable;
         else
@@ -642,6 +644,10 @@ public class ExtractStyle {
                 bmp = ((BitmapDrawable)drawable).getBitmap();
             else
             {
+                if (drawable instanceof ScaleDrawable)
+                {
+                    return getDrawable(((ScaleDrawable)drawable).getDrawable(), filename);
+                }
                 if (drawable instanceof LayerDrawable)
                 {
                     return getLayerDrawable(drawable, filename);
@@ -747,7 +753,8 @@ public class ExtractStyle {
 
             if (null != qtClassName)
                 json.put("qtClass", qtClassName);
-
+            json.put("defaultBackgroundColor", defaultBackgroundColor);
+            json.put("defaultTextColorPrimary", defaultTextColor);
             final int N = a.getIndexCount();
             for (int i = 0; i < N; i++) {
                 int attr = a.getIndex(i);
@@ -1265,6 +1272,14 @@ public class ExtractStyle {
         MinistroActivity.nativeChmode(m_extractPath, 0755);
         m_context = context;
         m_theme = context.getTheme();
+        TypedArray array = m_theme.obtainStyledAttributes(new int[]{
+                android.R.attr.colorBackground,
+                android.R.attr.textColorPrimary,
+        });
+        defaultBackgroundColor = array.getColor(0, 0);
+        defaultTextColor = array.getColor(1, 0xFFFFFF);
+        array.recycle();
+
         JSONObject json = new JSONObject();
         try {
             json.put("buttonStyle", extractTextAppearanceInformations("buttonStyle", "QPushButton", null, -1));
@@ -1276,9 +1291,7 @@ public class ExtractStyle {
             extractCompoundButton(json, "radioButtonStyle", "QRadioButton");
             json.put("textViewStyle", extractTextAppearanceInformations("textViewStyle", "QWidget", null, -1));
             extractItemsStyle(json);
-            //extractCompoundButton(json, "buttonStyleToggle", null);
-            //extractCompoundButton(json, "switchStyle", null);
-            //json.put("imageButtonStyle", extractImageViewInformations("imageButtonStyle", null));
+            extractCompoundButton(json, "buttonStyleToggle", null);
             OutputStreamWriter jsonWriter;
             jsonWriter = new OutputStreamWriter(new FileOutputStream(m_extractPath+"style.json"));
             jsonWriter.write(json.toString(1));

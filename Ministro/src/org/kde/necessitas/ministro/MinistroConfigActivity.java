@@ -105,6 +105,7 @@ public class MinistroConfigActivity extends Activity
         super.onCreate(savedInstanceState);
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     protected void onDestroy()
     {

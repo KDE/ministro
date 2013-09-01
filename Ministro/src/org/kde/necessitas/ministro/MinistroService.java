@@ -182,6 +182,7 @@ public class MinistroService extends Service
             return res;
         }
 
+        @SuppressWarnings("deprecation")
         @Override
         protected void onPostExecute(Boolean result)
         {
@@ -225,8 +226,10 @@ public class MinistroService extends Service
         return m_ministroRootPath + "dl/ssl/";
     }
 
-    public String getMinistroStyleRootPath()
+    public String getMinistroStyleRootPath(int displayDpi)
     {
+        if (displayDpi != -1)
+            return m_ministroRootPath + "dl/style/" + displayDpi + "/";
         return m_ministroRootPath + "dl/style/";
     }
 
@@ -342,6 +345,10 @@ public class MinistroService extends Service
         }
     }
 
+    public SharedPreferences getPreferences()
+    {
+        return getSharedPreferences("Ministro", MODE_PRIVATE);
+    }
     /**
     * Called by a finished {@link MinistroActivity} in order to let the service
     * notify the application which caused the activity about the result of the
@@ -500,7 +507,7 @@ public class MinistroService extends Service
         try
         {
             // Migrate settings
-            SharedPreferences preferences = getSharedPreferences("Ministro", MODE_PRIVATE);
+            SharedPreferences preferences = getPreferences();
             m_repository = preferences.getString(MINISTRO_REPOSITORY_KEY, MINISTRO_DEFAULT_REPOSITORY);
             m_checkFrequency = preferences.getLong(MINISTRO_CHECK_FREQUENCY_KEY, 7l * 24 * 3600 * 1000);
             m_lastCheckUpdates = preferences.getLong(MINISTRO_CHECK_UPDATES_KEY, 0);//System.currentTimeMillis());
@@ -539,7 +546,7 @@ public class MinistroService extends Service
         } catch (IOException e) {
             e.printStackTrace();
         }
-        SharedPreferences preferences = getSharedPreferences("Ministro", MODE_PRIVATE);
+        SharedPreferences preferences = getPreferences();
         if (!preferences.getBoolean(MINISTRO_MIGRATED_KEY, false))
             migrateSettings();
         else
@@ -565,7 +572,7 @@ public class MinistroService extends Service
     @Override
     public void onDestroy()
     {
-        SharedPreferences preferences = getSharedPreferences("Ministro", MODE_PRIVATE);
+        SharedPreferences preferences = getPreferences();
         SharedPreferences.Editor editor = preferences.edit();
         editor.putBoolean(MINISTRO_CHECK_CRC_KEY, false);
         editor.commit();

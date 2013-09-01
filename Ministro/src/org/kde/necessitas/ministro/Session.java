@@ -34,8 +34,9 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
-import android.os.RemoteException;
 import android.util.Log;
 import android.util.SparseArray;
 
@@ -49,6 +50,7 @@ public class Session
     private static final String MINIMUM_MINISTRO_API_KEY = "minimum.ministro.api";
     private static final String MINIMUM_QT_VERSION_KEY = "minimum.qt.version";
     public static final String UPDATE_KEY = "update";
+    private static final String DISPLAY_DPI_KEY = "display.dpi";
     // / Ministro server parameter keys
 
     // / loader parameter keys
@@ -77,9 +79,10 @@ public class Session
 
     // used to check Ministro Service compatibility
     private static final int MINISTRO_MIN_API_LEVEL = 1;
-    private static final int MINISTRO_MAX_API_LEVEL = 3;
+    private static final int MINISTRO_MAX_API_LEVEL = 4;
 
     public static final String[] NECESSITAS_SOURCE = { "https://files.kde.org/necessitas/ministro/android/necessitas/" };
+    public static final String MINISTRO_VERSION = "MINISTRO_VERSION";
 
     private MinistroService m_service = null;
     private HashMap<String, String> m_environmentVariables = new HashMap<String, String>();
@@ -128,15 +131,6 @@ public class Session
         }
     }
 
-    /**
-    * Implements the
-    * {@link IMinistro.Stub#checkModules(IMinistroCallback, String[], String, int, int)}
-    * service method.
-    *
-    * @param callback
-    * @param parameters
-    * @throws RemoteException
-    */
     final void checkModulesImpl(boolean downloadMissingLibs, Result res)
     {
         if (!m_parameters.containsKey(REQUIRED_MODULES_KEY) || !m_parameters.containsKey(APPLICATION_TITLE_KEY) || !m_parameters.containsKey(MINIMUM_MINISTRO_API_KEY)
@@ -209,7 +203,20 @@ public class Session
 
         // this method is called by the activity client who needs modules.
         Bundle loaderParams = checkModules(null);
-        m_onlyExtractStyleAndSsl = !new File(m_service.getMinistroSslRootPath()).exists() || !new File(m_service.getMinistroStyleRootPath()).exists();
+        SharedPreferences preferences = m_service.getPreferences();
+
+        int displayDPI = -1;
+        if (m_parameters.containsKey(DISPLAY_DPI_KEY))
+            displayDPI = m_parameters.getInt(DISPLAY_DPI_KEY);
+
+        m_onlyExtractStyleAndSsl = !new File(m_service.getMinistroSslRootPath()).exists()
+                || !new File(m_service.getMinistroStyleRootPath(displayDPI)).exists();
+        try {
+            m_onlyExtractStyleAndSsl |= !preferences.getString(MINISTRO_VERSION, "").equals(m_service.getPackageManager().getPackageInfo(m_service.getPackageName(), 0).versionName);
+
+        } catch (PackageManager.NameNotFoundException e) {
+            e.printStackTrace();
+        }
         if (!m_onlyExtractStyleAndSsl && (!downloadMissingLibs || (loaderParams.containsKey(ERROR_CODE_KEY) && EC_NO_ERROR == loaderParams.getInt(ERROR_CODE_KEY))))
         {
             try
@@ -421,7 +428,12 @@ public class Session
                         environmentVariables = environmentVariables.replaceAll("MINISTRO_SOURCE_ROOT_PATH", m_service.getLibsRootPath(sourceId, getRepository()));
                         mergeEnvironmentVariables(environmentVariables);
                         m_environmentVariables.put("MINISTRO_SSL_CERTS_PATH", m_service.getMinistroSslRootPath());
-                        m_environmentVariables.put("MINISTRO_ANDROID_STYLE_PATH", m_service.getMinistroStyleRootPath());
+                        int displayDPI = -1;
+                        if (m_parameters.containsKey(DISPLAY_DPI_KEY))
+                            displayDPI = m_parameters.getInt(DISPLAY_DPI_KEY);
+                        m_environmentVariables.put("MINISTRO_ANDROID_STYLE_PATH", m_service.getMinistroStyleRootPath(displayDPI));
+                        m_environmentVariables.put("QT_ANDROID_STYLE_PATH", m_service.getMinistroStyleRootPath(-1));
+                        m_environmentVariables.put("QT_ANDROID_THEME_DISPLAY_DPI", String.valueOf(displayDPI));
                     }
                     if (root.hasAttribute("qtVersion"))
                         m_qtVersion = Integer.valueOf(root.getAttribute("qtVersion"));
@@ -501,7 +513,6 @@ public class Session
     * the list with libraries that need to be retrieved first.
     * </p>
     *
-    * @param libs
     * @param notFoundModules
     * @return true if all modules are available
     */
