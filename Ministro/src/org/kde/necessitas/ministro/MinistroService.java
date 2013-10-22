@@ -357,8 +357,9 @@ public class MinistroService extends Service
         {
             if (m_sessions.indexOfKey(id) >= 0)
             {
-                m_sessions.get(id).retrievalFinished(res);
+                Session s = m_sessions.get(id);
                 m_sessions.remove(id);
+                s.retrievalFinished(res);
                 if (m_sessions.size() == 0)
                     m_actionId = 0;
                 else

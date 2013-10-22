@@ -52,7 +52,7 @@ public class Session
     private static final String MINIMUM_MINISTRO_API_KEY = "minimum.ministro.api";
     private static final String MINIMUM_QT_VERSION_KEY = "minimum.qt.version";
     public static final String UPDATE_KEY = "update";
-    private static final String DISPLAY_DPI_KEY = "display.dpi";
+    private static final String ANDROID_THEMES_KEY = "android.themes";
     // / Ministro server parameter keys
 
     // / loader parameter keys
@@ -95,16 +95,28 @@ public class Session
     private Bundle m_parameters = null;
     private String m_repository = null;
 
-    ArrayList<Integer> m_sourcesIds = null;
+    private ArrayList<Integer> m_sourcesIds = null;
     private HashMap<String, Library> m_downloadedLibraries = new HashMap<String, Library>();
     private SparseArray<HashMap<String, Library>> m_downloadedLibrariesMap = new SparseArray<HashMap<String, Library>>();
     private final HashMap<String, Library> m_availableLibraries = new HashMap<String, Library>();
+    private int m_displayDPI = -1;
+    private String[] m_themes = null;
 
     private boolean m_onlyExtractStyleAndSsl = false;
 
     boolean onlyExtractStyleAndSsl()
     {
         return m_onlyExtractStyleAndSsl;
+    }
+
+    public int getDisplayDPI()
+    {
+        return m_displayDPI;
+    }
+
+    public String[] getThemes()
+    {
+        return m_themes;
     }
 
     public Session(MinistroService service, IMinistroCallback callback, Bundle parameters)
@@ -133,6 +145,29 @@ public class Session
         }
     }
 
+    private boolean setDeviceThemes(String[] themes)
+    {
+        boolean extractThemes = false;
+        ArrayList<String> deviceThemes = new ArrayList<String>();
+        for(String theme: themes)
+        {
+            try {
+                android.R.style.class.getDeclaredField(theme);
+                deviceThemes.add(theme);
+                extractThemes |= !new File(m_service.getMinistroStyleRootPath(m_displayDPI) + theme).exists();
+            } catch (NoSuchFieldException e) {
+                e.printStackTrace();
+            }
+        }
+
+        if (deviceThemes.size() == 0)
+            return extractThemes;
+
+        m_themes = new String[deviceThemes.size()];
+        m_themes = deviceThemes.toArray(m_themes);
+        return extractThemes;
+    }
+
     final void checkModulesImpl(boolean downloadMissingLibs, Result res)
     {
         if (!m_parameters.containsKey(REQUIRED_MODULES_KEY) || !m_parameters.containsKey(APPLICATION_TITLE_KEY) || !m_parameters.containsKey(MINIMUM_MINISTRO_API_KEY)
@@ -152,7 +187,12 @@ public class Session
             Log.e(MinistroService.TAG, "Invalid parameters: " + m_parameters.toString());
             return;
         }
-        int ministroApiLevel = m_parameters.getInt(MINIMUM_MINISTRO_API_KEY);
+
+        m_displayDPI = m_service.getResources().getDisplayMetrics().densityDpi;
+
+        boolean extractThemes = false;
+        if (m_parameters.containsKey(ANDROID_THEMES_KEY))
+            extractThemes = setDeviceThemes(m_parameters.getStringArray(ANDROID_THEMES_KEY));
 
         int qtApiLevel = m_parameters.getInt(MINIMUM_QT_VERSION_KEY);
         if (qtApiLevel > m_qtVersion) // the application needs a newer qt
@@ -179,6 +219,7 @@ public class Session
             return;
         }
 
+        int ministroApiLevel = m_parameters.getInt(MINIMUM_MINISTRO_API_KEY);
         if (ministroApiLevel < MINISTRO_MIN_API_LEVEL || ministroApiLevel > MINISTRO_MAX_API_LEVEL)
         {
             // panic !!! Ministro service is not compatible, user should upgrade
@@ -207,19 +248,22 @@ public class Session
         Bundle loaderParams = checkModules(null);
         SharedPreferences preferences = m_service.getPreferences();
 
-        int displayDPI = -1;
-        if (m_parameters.containsKey(DISPLAY_DPI_KEY))
-            displayDPI = m_parameters.getInt(DISPLAY_DPI_KEY);
-
-        m_onlyExtractStyleAndSsl = !new File(m_service.getMinistroSslRootPath()).exists()
-                || !new File(m_service.getMinistroStyleRootPath(displayDPI)).exists();
-        try {
+        m_onlyExtractStyleAndSsl = extractThemes | !new File(m_service.getMinistroSslRootPath()).exists()
+                || !new File(m_service.getMinistroStyleRootPath(m_displayDPI)).exists();
+        try
+        {
             m_onlyExtractStyleAndSsl |= !preferences.getString(MINISTRO_VERSION, "").equals(m_service.getPackageManager().getPackageInfo(m_service.getPackageName(), 0).versionName);
-
-        } catch (PackageManager.NameNotFoundException e) {
+        }
+        catch (PackageManager.NameNotFoundException e)
+        {
             e.printStackTrace();
         }
-        if (!m_onlyExtractStyleAndSsl && (!downloadMissingLibs || (loaderParams.containsKey(ERROR_CODE_KEY) && EC_NO_ERROR == loaderParams.getInt(ERROR_CODE_KEY))))
+
+        if ((m_onlyExtractStyleAndSsl || downloadMissingLibs) && loaderParams.getInt(ERROR_CODE_KEY) != 0)
+        {
+            m_service.startRetrieval(this);
+        }
+        else
         {
             try
             {
@@ -228,7 +272,6 @@ public class Session
                     loaderParams.putInt(ERROR_CODE_KEY, EC_DOWNLOAD_CANCELED);
                     loaderParams.putString(ERROR_MESSAGE_KEY, m_service.getResources().getString(R.string.ministro_canceled));
                 }
-
                 Library.mergeBundleParameters(loaderParams, ENVIRONMENT_VARIABLES_KEY, m_parameters, ENVIRONMENT_VARIABLES_KEY);
                 Library.mergeBundleParameters(loaderParams, APPLICATION_PARAMETERS_KEY, m_parameters, APPLICATION_PARAMETERS_KEY);
                 m_callback.loaderReady(loaderParams);
@@ -237,13 +280,6 @@ public class Session
             {
                 e.printStackTrace();
             }
-        }
-        else
-        {
-            // Starts a retrieval of the modules which are not readily
-            // accessible.
-            m_onlyExtractStyleAndSsl &= loaderParams.containsKey(ERROR_CODE_KEY) && EC_NO_ERROR == loaderParams.getInt(ERROR_CODE_KEY);
-            m_service.startRetrieval(this);
         }
     }
 
@@ -440,12 +476,8 @@ public class Session
                         environmentVariables = environmentVariables.replaceAll("MINISTRO_SOURCE_ROOT_PATH", m_service.getLibsRootPath(sourceId, getRepository()));
                         mergeEnvironmentVariables(environmentVariables);
                         m_environmentVariables.put("MINISTRO_SSL_CERTS_PATH", m_service.getMinistroSslRootPath());
-                        int displayDPI = -1;
-                        if (m_parameters.containsKey(DISPLAY_DPI_KEY))
-                            displayDPI = m_parameters.getInt(DISPLAY_DPI_KEY);
-                        m_environmentVariables.put("MINISTRO_ANDROID_STYLE_PATH", m_service.getMinistroStyleRootPath(displayDPI));
-                        m_environmentVariables.put("QT_ANDROID_STYLE_PATH", m_service.getMinistroStyleRootPath(-1));
-                        m_environmentVariables.put("QT_ANDROID_THEME_DISPLAY_DPI", String.valueOf(displayDPI));
+                        m_environmentVariables.put("MINISTRO_ANDROID_STYLE_PATH", m_service.getMinistroStyleRootPath(m_displayDPI));
+                        m_environmentVariables.put("QT_ANDROID_THEME_DISPLAY_DPI", String.valueOf(m_displayDPI));
                     }
                     if (root.hasAttribute("qtVersion"))
                         m_qtVersion = Integer.valueOf(root.getAttribute("qtVersion"));
