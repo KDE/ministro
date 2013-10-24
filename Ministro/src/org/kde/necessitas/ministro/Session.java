@@ -124,6 +124,7 @@ public class Session
         m_service = service;
         m_callback = callback;
         m_parameters = parameters;
+        m_displayDPI = m_service.getResources().getDisplayMetrics().densityDpi;
         if (!parameters.getBoolean(UPDATE_KEY, false))
             m_sourcesIds = m_service.getSourcesIds(getSources());
         else
@@ -188,8 +189,6 @@ public class Session
             return;
         }
 
-        m_displayDPI = m_service.getResources().getDisplayMetrics().densityDpi;
-
         boolean extractThemes = false;
         if (m_parameters.containsKey(ANDROID_THEMES_KEY))
             extractThemes = setDeviceThemes(m_parameters.getStringArray(ANDROID_THEMES_KEY));
@@ -247,9 +246,11 @@ public class Session
         // this method is called by the activity client who needs modules.
         Bundle loaderParams = checkModules(null);
         SharedPreferences preferences = m_service.getPreferences();
+        if (new File(m_service.getMinistroStyleRootPath(-1) + "style.json").exists())
+            Library.removeAllFiles(m_service.getMinistroStyleRootPath(-1)); // clean old styles
 
         m_onlyExtractStyleAndSsl = extractThemes | !new File(m_service.getMinistroSslRootPath()).exists()
-                || !new File(m_service.getMinistroStyleRootPath(m_displayDPI)).exists();
+                || !new File(m_service.getMinistroStyleRootPath(m_displayDPI) + "style.json").exists();
         try
         {
             m_onlyExtractStyleAndSsl |= !preferences.getString(MINISTRO_VERSION, "").equals(m_service.getPackageManager().getPackageInfo(m_service.getPackageName(), 0).versionName);
@@ -259,7 +260,7 @@ public class Session
             e.printStackTrace();
         }
 
-        if ((m_onlyExtractStyleAndSsl || downloadMissingLibs) && loaderParams.getInt(ERROR_CODE_KEY) != 0)
+        if (m_onlyExtractStyleAndSsl || (downloadMissingLibs && loaderParams.getInt(ERROR_CODE_KEY) == EC_NOT_FOUND) )
         {
             m_service.startRetrieval(this);
         }
