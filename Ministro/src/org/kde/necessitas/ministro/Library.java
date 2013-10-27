@@ -229,7 +229,7 @@ class Library
         return rootPath + path;
     }
 
-    public static void removeAllFiles(String path)
+    public static void removeAllFiles(String path, boolean recursive)
     {
         File f = new File(path);
         if (!f.exists())
@@ -241,7 +241,10 @@ class Library
         {
             try
             {
-                new File(path + files[i]).delete();
+                File item = new File(path + files[i]);
+                if (item.isDirectory() && recursive)
+                    removeAllFiles(item.getAbsolutePath(), recursive);
+                item.delete();
             }
             catch (Exception e)
             {

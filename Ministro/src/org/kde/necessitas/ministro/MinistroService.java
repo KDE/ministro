@@ -46,6 +46,7 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
@@ -431,6 +432,7 @@ public class MinistroService extends Service
                 JSONArray sources = json.getJSONArray(MINISTRO_SOURCES_KEY);
                 m_sources.clear();
                 m_nextId = 0;
+                // Clean old data
                 for (int i = 0; i < sources.length(); i++)
                 {
                     JSONObject s = sources.getJSONObject(i);
@@ -444,13 +446,13 @@ public class MinistroService extends Service
                         File f = new File(path + "style");
                         if (f.exists())
                         {
-                            Library.removeAllFiles(path + "style");
+                            Library.removeAllFiles(path + "style", true);
                             f.delete();
                         }
                         f = new File(path + "ssl");
                         if (f.exists())
                         {
-                            Library.removeAllFiles(path + "ssl");
+                            Library.removeAllFiles(path + "ssl", true);
                             f.delete();
                         }
                     }
@@ -458,6 +460,28 @@ public class MinistroService extends Service
                     {
                         e.printStackTrace();
                     }
+                }
+
+                SharedPreferences preferences = getPreferences();
+                boolean systemUpdate = !preferences.getString("CODENAME", "").equals(android.os.Build.VERSION.CODENAME)
+                        || !preferences.getString("INCREMENTAL", "").equals(android.os.Build.VERSION.INCREMENTAL)
+                        || !preferences.getString("RELEASE", "").equals(android.os.Build.VERSION.RELEASE);
+                boolean cleanOldStyles = false;
+                try {
+                    cleanOldStyles = !preferences.getString(Session.MINISTRO_VERSION, "").equals(getPackageManager().getPackageInfo(getPackageName(), 0).versionName);
+                } catch (PackageManager.NameNotFoundException e) {
+                    e.printStackTrace();
+                }
+
+                if (systemUpdate || cleanOldStyles || new File(getMinistroStyleRootPath(-1) + "style.json").exists())
+                {
+                    Library.removeAllFiles(getMinistroStyleRootPath(-1), true);
+                    new File(getMinistroStyleRootPath(-1)).delete();
+                }
+                if (systemUpdate)
+                {
+                    Library.removeAllFiles(getMinistroSslRootPath(), true);
+                    new File(getMinistroSslRootPath()).delete();
                 }
             }
             catch (Exception e)

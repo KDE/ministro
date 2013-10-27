@@ -669,21 +669,17 @@ public class MinistroActivity extends Activity
             try
             {
                 SharedPreferences preferences = getSharedPreferences("Ministro", MODE_PRIVATE);
-                boolean systemUpdate = !preferences.getString("CODENAME", "").equals(android.os.Build.VERSION.CODENAME)
-                        || !preferences.getString("INCREMENTAL", "").equals(android.os.Build.VERSION.INCREMENTAL)
-                        || !preferences.getString("RELEASE", "").equals(android.os.Build.VERSION.RELEASE);
-                boolean cleanOldStyles = !preferences.getString(Session.MINISTRO_VERSION, "").equals(getPackageManager().getPackageInfo(getPackageName(), 0).versionName);
+
                 // extract device look&feel
                 String _style = "style/" + m_session.getDisplayDPI();
-                if (systemUpdate || cleanOldStyles || m_session.onlyExtractStyleAndSsl() || !(new File(m_rootPath + _style).exists()) || !(new File(m_rootPath + _style + "/style.json").exists()))
+                if (m_session.extractStyle())
                 {
                     m_message = getResources().getString(R.string.extracting_look_n_feel_msg);
                     publishProgress(m_message);
                     String path = Library.mkdirParents(m_rootPath, _style, 0);
-                    if (cleanOldStyles || !(new File(path + "/style.json").exists()))
+                    if (!(new File(path + "/style.json").exists()))
                     {
                         // Extract default (dark) theme
-                        Library.removeAllFiles(path); // clean old files
                         setTheme(android.R.style.Theme);
                         new ExtractStyle(MinistroActivity.this, path);
                     }
@@ -693,8 +689,7 @@ public class MinistroActivity extends Activity
                         for (String theme: neededThemes) {
                             try {
                                 path = Library.mkdirParents(stylePath, theme, 0);
-                                if (cleanOldStyles || !(new File(path + "/style.json").exists())) {
-                                    Library.removeAllFiles(path); // clean old files
+                                if (!(new File(path + "/style.json").exists())) {
                                     setTheme(android.R.style.class.getDeclaredField(theme).getInt(null));
                                     new ExtractStyle(MinistroActivity.this, path);
                                 }
@@ -711,12 +706,12 @@ public class MinistroActivity extends Activity
                 }
 
                 // extract device root certificates
-                if (systemUpdate || !(new File(m_rootPath + "ssl").exists()))
+                if (!(new File(m_session.getMinistroSslRootPath()).exists()))
                 {
                     m_message = getResources().getString(R.string.extracting_SSL_msg);
                     publishProgress(m_message);
                     String path = Library.mkdirParents(m_rootPath, "ssl", 0);
-                    Library.removeAllFiles(path);
+                    Library.removeAllFiles(path, true);
                     try
                     {
                         KeyStore ks = null;

@@ -52,6 +52,7 @@ import android.graphics.drawable.ScaleDrawable;
 import android.graphics.drawable.StateListDrawable;
 import android.os.Build;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.util.Xml;
 import android.view.inputmethod.EditorInfo;
 
@@ -1267,6 +1268,7 @@ public class ExtractStyle {
 
     public ExtractStyle(Context context, String extractPath)
     {
+        Log.i(MinistroService.TAG, "Extract " + extractPath);
         m_extractPath = extractPath + "/";
         new File(m_extractPath).mkdirs();
         MinistroActivity.nativeChmode(m_extractPath, 0755);
