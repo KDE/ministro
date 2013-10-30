@@ -120,6 +120,11 @@ public class Session
         return  m_service.getMinistroSslRootPath();
     }
 
+    public SharedPreferences getPreferences()
+    {
+        return m_service.getPreferences();
+    }
+
     public int getDisplayDPI()
     {
         return m_displayDPI;
@@ -161,16 +166,17 @@ public class Session
     {
         m_extractStyle = !new File(m_service.getMinistroStyleRootPath(m_displayDPI) + "style.json").exists();
         ArrayList<String> deviceThemes = new ArrayList<String>();
-        for(String theme: themes)
-        {
-            try {
-                android.R.style.class.getDeclaredField(theme);
-                deviceThemes.add(theme);
-                m_extractStyle |= !new File(m_service.getMinistroStyleRootPath(m_displayDPI) + theme).exists();
-            } catch (NoSuchFieldException e) {
-                e.printStackTrace();
+        if (themes != null)
+            for(String theme: themes)
+            {
+                try {
+                    android.R.style.class.getDeclaredField(theme);
+                    deviceThemes.add(theme);
+                    m_extractStyle |= !new File(m_service.getMinistroStyleRootPath(m_displayDPI) + theme).exists();
+                } catch (NoSuchFieldException e) {
+                    e.printStackTrace();
+                }
             }
-        }
 
         if (deviceThemes.size() == 0)
             return;
@@ -199,10 +205,22 @@ public class Session
             return;
         }
 
-        SharedPreferences preferences = m_service.getPreferences();
-
         if (m_parameters.containsKey(ANDROID_THEMES_KEY))
             setDeviceThemes(m_parameters.getStringArray(ANDROID_THEMES_KEY));
+        else
+            setDeviceThemes(null);
+
+        SharedPreferences preferences = m_service.getPreferences();
+        try
+        {
+            m_extractStyle |= !preferences.getString(MINISTRO_VERSION, "").equals(m_service.getPackageManager().getPackageInfo(m_service.getPackageName(), 0).versionName);
+        }
+        catch (PackageManager.NameNotFoundException e)
+        {
+            e.printStackTrace();
+        }
+
+        m_onlyExtractStyleAndSsl = false;
 
         int qtApiLevel = m_parameters.getInt(MINIMUM_QT_VERSION_KEY);
         if (qtApiLevel > m_qtVersion) // the application needs a newer qt
@@ -257,18 +275,8 @@ public class Session
         // this method is called by the activity client who needs modules.
         Bundle loaderParams = checkModules(null);
 
-        if (!downloadMissingLibs)
-        {
+        if (downloadMissingLibs && loaderParams.getInt(ERROR_CODE_KEY) == EC_NO_ERROR)
             m_onlyExtractStyleAndSsl = m_extractStyle | !new File(m_service.getMinistroSslRootPath()).exists();
-            try
-            {
-                m_onlyExtractStyleAndSsl |= !preferences.getString(MINISTRO_VERSION, "").equals(m_service.getPackageManager().getPackageInfo(m_service.getPackageName(), 0).versionName);
-            }
-            catch (PackageManager.NameNotFoundException e)
-            {
-                e.printStackTrace();
-            }
-        }
         else
             m_onlyExtractStyleAndSsl = false;
 

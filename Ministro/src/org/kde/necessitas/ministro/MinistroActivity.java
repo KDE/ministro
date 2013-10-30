@@ -668,8 +668,7 @@ public class MinistroActivity extends Activity
         {
             try
             {
-                SharedPreferences preferences = getSharedPreferences("Ministro", MODE_PRIVATE);
-
+                SharedPreferences preferences = m_session.getPreferences();
                 // extract device look&feel
                 String _style = "style/" + m_session.getDisplayDPI();
                 if (m_session.extractStyle())
