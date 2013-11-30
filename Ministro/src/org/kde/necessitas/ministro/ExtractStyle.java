@@ -22,6 +22,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 
 import org.json.JSONArray;
@@ -37,6 +38,7 @@ import android.content.res.XmlResourceParser;
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.Config;
 import android.graphics.Canvas;
+import android.graphics.NinePatch;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.RectF;
@@ -60,8 +62,7 @@ import android.view.inputmethod.EditorInfo;
 public class ExtractStyle {
 
     native static int[] extractChunkInfo(byte[] chunkData);
-    native static int[] extract9PatchInfo(Object ninePatchDrawable);
-    native static Object getClipStateDrawableObject(Object clipStateObject);
+    native static int[] extractNativeChunkInfo(int nativeChunk);
 
     Class<?> styleableClass = getStylableClass();
     final int[] EMPTY_STATE_SET = {};
@@ -134,7 +135,6 @@ public class ExtractStyle {
     final int View_minHeight = getField(styleableClass,"View_minHeight");
     final int View_onClick = getField(styleableClass,"View_onClick");
     final int View_overScrollMode = getField(styleableClass,"View_overScrollMode");
-
 
     final int TextAppearance_textColorHighlight = getField(styleableClass,"TextAppearance_textColorHighlight");
     final int TextAppearance_textColor = getField(styleableClass,"TextAppearance_textColor");
@@ -229,7 +229,7 @@ public class ExtractStyle {
     final int defaultTextColor;
 
     class FakeCanvas extends Canvas {
-        int[] chunkData= null;
+        int[] chunkData = null;
         class Size {
             public int s,e;
             Size(int start, int end)
@@ -238,11 +238,13 @@ public class ExtractStyle {
                 e=end;
             }
         }
+
         public boolean isHardwareAccelerated() {
             return true;
         }
+
         public void drawPatch(Bitmap bmp, byte[] chunks, RectF dst, Paint paint) {
-            chunkData=extractChunkInfo(chunks);
+            chunkData = extractChunkInfo(chunks);
         }
     }
 
@@ -617,20 +619,28 @@ public class ExtractStyle {
     {
         JSONObject jsonRect = new JSONObject();
         jsonRect.put("xdivs", getJsonArray(chunkData, 3, chunkData[0]));
-        jsonRect.put("ydivs", getJsonArray(chunkData, 3+chunkData[0], chunkData[1]));
-        jsonRect.put("colors", getJsonArray(chunkData, 3+chunkData[0]+chunkData[1], chunkData[2]));
+        jsonRect.put("ydivs", getJsonArray(chunkData, 3 + chunkData[0], chunkData[1]));
+        jsonRect.put("colors", getJsonArray(chunkData, 3 + chunkData[0] + chunkData[1], chunkData[2]));
         return jsonRect;
     }
 
-    private JSONObject findPatchesMarings(Drawable d) throws JSONException
+    private JSONObject findPatchesMarings(Drawable d) throws JSONException, NoSuchFieldException, IllegalAccessException
     {
-        if (Build.VERSION.SDK_INT>=11)
+        Field mNinePatch = ((NinePatchDrawable)d).getClass().getDeclaredField("mNinePatch");
+        mNinePatch.setAccessible(true);
+        NinePatch np = (NinePatch) mNinePatch.get(d);
+        if (Build.VERSION.SDK_INT < 19)
         {
-            FakeCanvas fc = new FakeCanvas();
-            d.draw(fc);
-            return getJsonChunkInfo(fc.chunkData);
+            Field mChunk = np.getClass().getDeclaredField("mChunk");
+            mChunk.setAccessible(true);
+            return getJsonChunkInfo(extractChunkInfo((byte[]) mChunk.get(np)));
         }
-        return getJsonChunkInfo(extract9PatchInfo(d));
+        else
+        {
+            Field mNativeChunk = np.getClass().getDeclaredField("mNativeChunk");
+            mNativeChunk.setAccessible(true);
+            return getJsonChunkInfo(extractNativeChunkInfo(mNativeChunk.getInt(np)));
+        }
     }
 
     public JSONObject getDrawable(Object drawable, String filename)
@@ -665,7 +675,10 @@ public class ExtractStyle {
                 {
                     try {
                         json.put("type", "clipDrawable");
-                        json.put("drawable", getDrawable(getClipStateDrawableObject(((ClipDrawable)drawable).getConstantState()), filename));
+                        Drawable.ConstantState dcs = ((ClipDrawable)drawable).getConstantState();
+                        Field f = dcs.getClass().getDeclaredField("mDrawable");
+                        f.setAccessible(true);
+                        json.put("drawable", getDrawable(f.get(dcs), filename));
                         Rect padding = new Rect();
                         if (((Drawable) drawable).getPadding(padding))
                             json.put("padding", getJsonRect(padding));
@@ -715,7 +728,7 @@ public class ExtractStyle {
                                 json.put("padding", getJsonRect(padding));
                             json.put("chunkInfo", findPatchesMarings(d));
                             return json;
-                        } catch (JSONException e) {
+                        } catch (Exception e) {
                             e.printStackTrace();
                         }
                     }

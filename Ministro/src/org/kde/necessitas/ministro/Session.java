@@ -498,6 +498,7 @@ public class Session
                         mergeEnvironmentVariables(environmentVariables);
                         m_environmentVariables.put("MINISTRO_SSL_CERTS_PATH", m_service.getMinistroSslRootPath());
                         m_environmentVariables.put("MINISTRO_ANDROID_STYLE_PATH", m_service.getMinistroStyleRootPath(m_displayDPI));
+                        m_environmentVariables.put("QT_ANDROID_THEMES_ROOT_PATH", m_service.getMinistroStyleRootPath(-1));
                         m_environmentVariables.put("QT_ANDROID_THEME_DISPLAY_DPI", String.valueOf(m_displayDPI));
                     }
                     if (root.hasAttribute("qtVersion"))
