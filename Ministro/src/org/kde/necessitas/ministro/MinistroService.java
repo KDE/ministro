@@ -38,6 +38,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 
 import android.app.Notification;
 import android.app.NotificationManager;
@@ -73,6 +74,135 @@ public class MinistroService extends Service
     private String m_ministroRootPath = null;
     private boolean m_checkCrc = true;
 
+
+    private boolean putLibraries(LibrariesStruct libs, int sourceId)
+    {
+        SourcesCache sc = SourcesCache.s_sourcesCache.get(sourceId);
+        if (sc == null)
+            return false;
+
+        libs.sourcesCache.put(sourceId, sc);
+
+        libs.downloadedLibraries.putAll(sc.downloadedLibraries);
+        libs.availableLibraries.putAll(sc.availableLibraries);
+
+        if (sc.qtVersion > libs.qtVersion)
+            libs.qtVersion = sc.qtVersion;
+
+        if (sc.loaderClassName != null)
+            libs.loaderClassName = sc.loaderClassName;
+
+        libs.applicationParams.addAll(sc.applicationParams);
+        libs.environmentVariables.putAll(sc.environmentVariables);
+
+        return true;
+    }
+
+    // this method reload all downloaded libraries
+    public LibrariesStruct refreshLibraries(ArrayList<Integer> sourcesIds, int displayDPI, boolean checkCrc)
+    {
+        LibrariesStruct ret = new LibrariesStruct();
+
+        synchronized (SourcesCache.sync)
+        {
+            try
+            {
+                for (Integer sourceId : sourcesIds)
+                {
+                    if (putLibraries(ret, sourceId))
+                        continue;
+
+                    File file = new File(getVersionXmlFile(sourceId, getRepository()));
+                    if (!file.exists())
+                        continue;
+
+                    SourcesCache sc = new SourcesCache();
+                    DocumentBuilderFactory documentFactory = DocumentBuilderFactory.newInstance();
+                    DocumentBuilder documentBuilder = documentFactory.newDocumentBuilder();
+                    Document dom = documentBuilder.parse(new FileInputStream(file));
+                    Element root = dom.getDocumentElement();
+                    sc.version = Double.valueOf(root.getAttribute("version"));
+                    sc.loaderClassName = root.getAttribute("loaderClassName");
+                    if (root.hasAttribute("applicationParameters"))
+                    {
+                        String params = root.getAttribute("applicationParameters");
+                        if (params != null)
+                        {
+                            params = params.replaceAll("MINISTRO_PATH", getFilesDir().getAbsolutePath());
+                            ArrayList<String> ap = new ArrayList<String>();
+                            for (String parameter : params.split("\t"))
+                                if (parameter.length() > 0)
+                                    ap.add(parameter);
+                            if (ap.size() > 0)
+                                sc.applicationParams = ap;
+                        }
+                    }
+
+                    if (root.hasAttribute("environmentVariables"))
+                    {
+                        String environmentVariables = root.getAttribute("environmentVariables");
+                        if (environmentVariables != null)
+                        {
+                            environmentVariables = environmentVariables.replaceAll("MINISTRO_PATH", getMinistroRootPath());
+                            environmentVariables = environmentVariables.replaceAll("MINISTRO_SOURCE_ROOT_PATH", getLibsRootPath(sourceId, getRepository()));
+                            HashMap<String, String> envVars = new HashMap<String, String>();
+                            for (String envPair : environmentVariables.split("\t"))
+                            {
+                                int pos = envPair.indexOf('=');
+                                if (pos > 0 && pos + 1 < envPair.length())
+                                    envVars.put(envPair.substring(0, pos), envPair.substring(pos + 1));
+                            }
+                            if (envVars.size() > 0)
+                                sc.environmentVariables = envVars;
+                        }
+                    }
+
+                    if (root.hasAttribute("qtVersion"))
+                        sc.qtVersion = Integer.valueOf(root.getAttribute("qtVersion"));
+
+                    if (!root.hasAttribute("flags"))
+                    { // fix env vars
+                        if (sc.environmentVariables != null)
+                        {
+                            if (sc.environmentVariables.containsKey("QML_IMPORT_PATH"))
+                                sc.environmentVariables.put("QML_IMPORT_PATH", getLibsRootPath(sourceId, getRepository()) + "imports");
+
+                            if (sc.environmentVariables.containsKey("QT_PLUGIN_PATH"))
+                                sc.environmentVariables.put("QT_PLUGIN_PATH", getLibsRootPath(sourceId, getRepository()) + "plugins");
+                        }
+                    }
+                    root.normalize();
+                    Node node = root.getFirstChild();
+
+                    HashMap<String, Library> downloadedLibraries = new HashMap<String, Library>();
+                    Library.loadLibs(node, getLibsRootPath(sourceId, getRepository()), sourceId, sc.availableLibraries, downloadedLibraries, checkCrc);
+                    sc.downloadedLibraries.putAll(downloadedLibraries);
+                    SourcesCache.s_sourcesCache.put(sourceId, sc);
+                    putLibraries(ret, sourceId);
+                }
+            }
+            catch (Exception e)
+            {
+                e.printStackTrace();
+            }
+        }
+
+        if (ret.sourcesCache.size()>0)
+        {
+            ret.environmentVariables.put("MINISTRO_SSL_CERTS_PATH", getMinistroSslRootPath());
+            ret.environmentVariables.put("MINISTRO_ANDROID_STYLE_PATH", getMinistroStyleRootPath(displayDPI));
+            ret.environmentVariables.put("QT_ANDROID_THEMES_ROOT_PATH", getMinistroStyleRootPath(-1));
+            ret.environmentVariables.put("QT_ANDROID_THEME_DISPLAY_DPI", String.valueOf(displayDPI));
+        }
+
+        if (sourcesIds.size() > 1)
+        {
+            for (Library lib : ret.downloadedLibraries.values())
+                Library.setLoadPriority(lib, ret.downloadedLibraries);
+        }
+
+        return ret;
+    }
 
     public String getRepository()
     {

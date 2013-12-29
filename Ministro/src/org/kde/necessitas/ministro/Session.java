@@ -26,7 +26,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.Set;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -87,18 +86,14 @@ public class Session
     public static final String MINISTRO_VERSION = "MINISTRO_VERSION";
 
     private MinistroService m_service = null;
-    private HashMap<String, String> m_environmentVariables = new HashMap<String, String>();
-    private LinkedHashSet<String> m_applicationParams = new LinkedHashSet<String>();
-    private String m_loaderClassName = null;
+    private LibrariesStruct m_libraries = null;
     private String m_pathSeparator = null;
     private IMinistroCallback m_callback = null;
     private Bundle m_parameters = null;
     private String m_repository = null;
 
     private ArrayList<Integer> m_sourcesIds = null;
-    private HashMap<String, Library> m_downloadedLibraries = new HashMap<String, Library>();
     private SparseArray<HashMap<String, Library>> m_downloadedLibrariesMap = new SparseArray<HashMap<String, Library>>();
-    private final HashMap<String, Library> m_availableLibraries = new HashMap<String, Library>();
     private int m_displayDPI = -1;
     private String[] m_themes = null;
 
@@ -223,7 +218,7 @@ public class Session
         m_onlyExtractStyleAndSsl = false;
 
         int qtApiLevel = m_parameters.getInt(MINIMUM_QT_VERSION_KEY);
-        if (qtApiLevel > m_qtVersion) // the application needs a newer qt
+        if (qtApiLevel > m_libraries.qtVersion) // the application needs a newer qt
                                     // version
         {
             if (m_parameters.getBoolean(QT_VERSION_PARAMETER_KEY, false))
@@ -304,14 +299,6 @@ public class Session
         }
     }
 
-    HashMap<String, Library> getAvailableLibraries()
-    {
-        synchronized (this)
-        {
-            return m_availableLibraries;
-        }
-    }
-
     private String[] getSources()
     {
         if (!m_parameters.containsKey(SOURCES_KEY))
@@ -355,183 +342,10 @@ public class Session
         return new URL(m_service.getSource(sourceId) + getRepository() + "/" + android.os.Build.CPU_ABI + "/android-" + android.os.Build.VERSION.SDK_INT + "/libs-" + version + ".xml");
     }
 
-    static void loadLibs(Node node, String rootPath, Integer sourceId, HashMap<String, Library> availableLibraries, HashMap<String, Library> downloadedLibraries, boolean checkCRC)
-    {
-        try
-        {
-            while (node != null)
-            {
-                if (node.getNodeType() == Node.ELEMENT_NODE)
-                {
-                    try
-                    {
-                        Library lib = Library.getLibrary((Element) node, true);
-                        File file = new File(rootPath + lib.filePath);
-                        lib.sourceId = sourceId;
-                        if (file.exists())
-                        {
-                            if (checkCRC && !Library.checkCRC(file.getAbsolutePath(), lib.sha1))
-                                file.delete();
-                            else
-                            {
-                                boolean allOk = true;
-                                if (lib.needs != null)
-                                {
-                                    for (NeedsStruct needed : lib.needs)
-                                        // check if its needed files are
-                                        // available
-                                        if (needed.type != null && needed.type.equals("jar"))
-                                        {
-                                            File f = new File(rootPath + needed.filePath);
-                                            if (!f.exists())
-                                            {
-                                                allOk = false;
-                                                break;
-                                            }
-                                        }
-                                    if (!allOk)
-                                    {
-                                        for (NeedsStruct needed : lib.needs)
-                                            // remove all needed files
-                                            if (needed.type != null && needed.type.equals("jar"))
-                                            {
-                                                try
-                                                {
-                                                    File f = new File(rootPath + needed.filePath);
-                                                    if (f.exists())
-                                                        f.delete();
-                                                }
-                                                catch (Exception e)
-                                                {
-                                                    e.printStackTrace();
-                                                }
-                                            }
-                                        file.delete(); // delete the parent
-                                    }
-                                }
-                                if (downloadedLibraries != null && allOk)
-                                    downloadedLibraries.put(lib.name, lib);
-                            }
-                        }
-                        availableLibraries.put(lib.name, lib);
-                    }
-                    catch (Exception e)
-                    {
-                        e.printStackTrace();
-                    }
-                }
-                // Workaround for an unbelievable bug !!!
-                try
-                {
-                    node = node.getNextSibling();
-                }
-                catch (Exception e)
-                {
-                    e.printStackTrace();
-                    break;
-                }
-            }
-        }
-        catch (Exception e)
-        {
-            e.printStackTrace();
-        }
-    }
-
-    // when there are more sources is possible that the library load priority
-    // level to be invalid, so we must re-compute it.
-    void setLoadPriority(Library lib)
-    {
-        if (lib.touched)
-            return;
-
-        lib.touched = true;
-        lib.level = 0;
-        if (lib.depends != null)
-        {
-            for (String dep : lib.depends)
-            {
-                Library l = m_downloadedLibraries.get(dep);
-                if (l != null)
-                {
-                    setLoadPriority(l);
-                    if (lib.level <= l.level)
-                        lib.level = l.level + 1;
-                }
-            }
-        }
-    }
-
     // this method reload all downloaded libraries
     void refreshLibraries(boolean checkCrc)
     {
-        synchronized (this)
-        {
-            try
-            {
-                m_downloadedLibraries.clear();
-                m_availableLibraries.clear();
-                for (Integer sourceId : m_sourcesIds)
-                {
-                    File file = new File(m_service.getVersionXmlFile(sourceId, getRepository()));
-                    if (!file.exists())
-                        continue;
-
-                    DocumentBuilderFactory documentFactory = DocumentBuilderFactory.newInstance();
-                    DocumentBuilder documentBuilder = documentFactory.newDocumentBuilder();
-                    Document dom = documentBuilder.parse(new FileInputStream(file));
-                    Element root = dom.getDocumentElement();
-                    m_versions.put(sourceId, Double.valueOf(root.getAttribute("version")));
-                    m_loaderClassName = root.getAttribute("loaderClassName");
-                    if (root.hasAttribute("applicationParameters"))
-                    {
-                        String params = root.getAttribute("applicationParameters");
-                        params = params.replaceAll("MINISTRO_PATH", m_service.getFilesDir().getAbsolutePath());
-                        mergeApplicationParameters(params);
-                    }
-
-                    if (root.hasAttribute("environmentVariables"))
-                    {
-                        String environmentVariables = root.getAttribute("environmentVariables");
-                        environmentVariables = environmentVariables.replaceAll("MINISTRO_PATH", m_service.getMinistroRootPath());
-                        environmentVariables = environmentVariables.replaceAll("MINISTRO_SOURCE_ROOT_PATH", m_service.getLibsRootPath(sourceId, getRepository()));
-                        mergeEnvironmentVariables(environmentVariables);
-                        m_environmentVariables.put("MINISTRO_SSL_CERTS_PATH", m_service.getMinistroSslRootPath());
-                        m_environmentVariables.put("MINISTRO_ANDROID_STYLE_PATH", m_service.getMinistroStyleRootPath(m_displayDPI));
-                        m_environmentVariables.put("QT_ANDROID_THEMES_ROOT_PATH", m_service.getMinistroStyleRootPath(-1));
-                        m_environmentVariables.put("QT_ANDROID_THEME_DISPLAY_DPI", String.valueOf(m_displayDPI));
-                    }
-                    if (root.hasAttribute("qtVersion"))
-                        m_qtVersion = Integer.valueOf(root.getAttribute("qtVersion"));
-
-                    if (!root.hasAttribute("flags"))
-                    { // fix env vars
-                        if (m_environmentVariables.containsKey("QML_IMPORT_PATH"))
-                            m_environmentVariables.put("QML_IMPORT_PATH", m_service.getLibsRootPath(sourceId, getRepository()) + "imports");
-
-                        if (m_environmentVariables.containsKey("QT_PLUGIN_PATH"))
-                            m_environmentVariables.put("QT_PLUGIN_PATH", m_service.getLibsRootPath(sourceId, getRepository()) + "plugins");
-                    }
-                    root.normalize();
-                    Node node = root.getFirstChild();
-
-                    HashMap<String, Library> downloadedLibraries = new HashMap<String, Library>();
-                    loadLibs(node, m_service.getLibsRootPath(sourceId, getRepository()), sourceId, m_availableLibraries, downloadedLibraries, checkCrc);
-                    m_downloadedLibraries.putAll(downloadedLibraries);
-                    m_downloadedLibrariesMap.put(sourceId, downloadedLibraries);
-                }
-
-                if (m_sourcesIds.size() > 1)
-                {
-                    for (Library lib : m_downloadedLibraries.values())
-                        setLoadPriority(lib);
-                }
-            }
-            catch (Exception e)
-            {
-                e.printStackTrace();
-            }
-        }
+        m_libraries = m_service.refreshLibraries(m_sourcesIds, m_displayDPI, checkCrc);
     }
 
     private SparseArray<Double> m_versions = new SparseArray<Double>();
@@ -541,13 +355,6 @@ public class Session
         if (m_versions.indexOfKey(sourceId) >= 0)
             return m_versions.get(sourceId);
         return -1;
-    }
-
-    private double m_qtVersion = 0x040800;
-
-    public double getQtVersion()
-    {
-        return m_qtVersion;
     }
 
     public enum Result
@@ -567,6 +374,12 @@ public class Session
     */
     void retrievalFinished(Result res)
     {
+        synchronized (SourcesCache.sync)
+        {
+            for(int sourceId : m_sourcesIds)
+                SourcesCache.s_sourcesCache.remove(sourceId);
+        }
+        refreshLibraries(false);
         checkModulesImpl(false, res);
     }
 
@@ -605,7 +418,7 @@ public class Session
             jarsArray.add(jar);
 
         params.putString(DEX_PATH_KEY, Library.join(jarsArray, m_pathSeparator));
-        params.putString(LOADER_CLASS_NAME_KEY, m_loaderClassName);
+        params.putString(LOADER_CLASS_NAME_KEY, m_libraries.loaderClassName);
         if (initClasses.size() > 0)
             params.putStringArray(STATIC_INIT_CLASSES_KEY, initClasses.toArray(new String[initClasses.size()]));
 
@@ -622,7 +435,7 @@ public class Session
             paths.add(m_service.getLibsRootPath(id, getRepository()));
         params.putStringArrayList(LIBS_PATH_KEY, paths);
         params.putString(ENVIRONMENT_VARIABLES_KEY, joinEnvironmentVariables());
-        params.putString(APPLICATION_PARAMETERS_KEY, Library.join(m_applicationParams, "\t"));
+        params.putString(APPLICATION_PARAMETERS_KEY, Library.join(m_libraries.applicationParams, "\t"));
         params.putInt(ERROR_CODE_KEY, res ? EC_NO_ERROR : EC_NOT_FOUND);
         if (!res)
             params.putString(ERROR_MESSAGE_KEY, m_service.getResources().getString(R.string.dependencies_error));
@@ -682,7 +495,7 @@ public class Session
         // it is added to the
         // list of readily accessible modules and its dependencies are checked
         // via a recursive call.
-        Library library = m_downloadedLibraries.get(module);
+        Library library = m_libraries.downloadedLibraries.get(module);
         if (library != null)
         {
             Module m = new Module();
@@ -723,7 +536,7 @@ public class Session
                 return false;
 
             // Deal with not yet readily accessible module's dependencies.
-            library = m_availableLibraries.get(module);
+            library = m_libraries.availableLibraries.get(module);
             if (library != null)
             {
                 Log.i(MinistroService.TAG, "Module '"+ module + "' not found");
@@ -804,7 +617,7 @@ public class Session
             Node node = root.getFirstChild();
 
             HashMap<String, Library> newLibraries = new HashMap<String, Library>();
-            loadLibs(node, m_service.getLibsRootPath(sourceId, getRepository()), sourceId, newLibraries, null, false);
+            Library.loadLibs(node, m_service.getLibsRootPath(sourceId, getRepository()), sourceId, newLibraries, null, false);
             HashMap<String, Library> changedLibs = new HashMap<String, Library>();
             String rootPath = m_service.getLibsRootPath(sourceId, getRepository());
 
@@ -870,31 +683,14 @@ public class Session
         return null;
     }
 
-    private void mergeApplicationParameters(String parameters)
-    {
-        for (String parameter : parameters.split("\t"))
-            if (parameter.length() > 0)
-                m_applicationParams.add(parameter);
-    }
-
-    private void mergeEnvironmentVariables(String environmentVariables)
-    {
-        for (String envPair : environmentVariables.split("\t"))
-        {
-            int pos = envPair.indexOf('=');
-            if (pos > 0 && pos + 1 < envPair.length())
-                m_environmentVariables.put(envPair.substring(0, pos), envPair.substring(pos + 1));
-        }
-    }
-
     private String joinEnvironmentVariables()
     {
         String env = new String();
-        for (String key : m_environmentVariables.keySet())
+        for (String key : m_libraries.environmentVariables.keySet())
         {
             if (env.length() > 0)
                 env += "\t";
-            env += key + "=" + m_environmentVariables.get(key);
+            env += key + "=" + m_libraries.environmentVariables.get(key);
         }
         return env;
     }

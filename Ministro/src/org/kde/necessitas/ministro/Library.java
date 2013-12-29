@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 
 import org.w3c.dom.Element;
@@ -31,6 +32,7 @@ import org.w3c.dom.NodeList;
 
 import android.annotation.SuppressLint;
 import android.os.Bundle;
+import android.util.SparseArray;
 
 class Library
 {
@@ -54,6 +56,114 @@ class Library
     public String sha1 = null;
     public String url;
     public Integer sourceId;
+
+    // when there are more sources is possible that the library load priority
+    // level to be invalid, so we must re-compute it.
+    static void setLoadPriority(Library lib, HashMap<String, Library> libraries)
+    {
+        if (lib.touched)
+            return;
+
+        lib.touched = true;
+        lib.level = 0;
+        if (lib.depends != null)
+        {
+            for (String dep : lib.depends)
+            {
+                Library l = libraries.get(dep);
+                if (l != null)
+                {
+                    setLoadPriority(l, libraries);
+                    if (lib.level <= l.level)
+                        lib.level = l.level + 1;
+                }
+            }
+        }
+    }
+
+
+    static void loadLibs(Node node, String rootPath, Integer sourceId, HashMap<String, Library> availableLibraries, HashMap<String, Library> downloadedLibraries, boolean checkCRC)
+    {
+        try
+        {
+            while (node != null)
+            {
+                if (node.getNodeType() == Node.ELEMENT_NODE)
+                {
+                    try
+                    {
+                        Library lib = Library.getLibrary((Element) node, true);
+                        File file = new File(rootPath + lib.filePath);
+                        lib.sourceId = sourceId;
+                        if (file.exists())
+                        {
+                            if (checkCRC && !Library.checkCRC(file.getAbsolutePath(), lib.sha1))
+                                file.delete();
+                            else
+                            {
+                                boolean allOk = true;
+                                if (lib.needs != null)
+                                {
+                                    for (NeedsStruct needed : lib.needs)
+                                        // check if its needed files are
+                                        // available
+                                        if (needed.type != null && needed.type.equals("jar"))
+                                        {
+                                            File f = new File(rootPath + needed.filePath);
+                                            if (!f.exists())
+                                            {
+                                                allOk = false;
+                                                break;
+                                            }
+                                        }
+                                    if (!allOk)
+                                    {
+                                        for (NeedsStruct needed : lib.needs)
+                                            // remove all needed files
+                                            if (needed.type != null && needed.type.equals("jar"))
+                                            {
+                                                try
+                                                {
+                                                    File f = new File(rootPath + needed.filePath);
+                                                    if (f.exists())
+                                                        f.delete();
+                                                }
+                                                catch (Exception e)
+                                                {
+                                                    e.printStackTrace();
+                                                }
+                                            }
+                                        file.delete(); // delete the parent
+                                    }
+                                }
+                                if (downloadedLibraries != null && allOk)
+                                    downloadedLibraries.put(lib.name, lib);
+                            }
+                        }
+                        availableLibraries.put(lib.name, lib);
+                    }
+                    catch (Exception e)
+                    {
+                        e.printStackTrace();
+                    }
+                }
+                // Workaround for an unbelievable bug !!!
+                try
+                {
+                    node = node.getNextSibling();
+                }
+                catch (Exception e)
+                {
+                    e.printStackTrace();
+                    break;
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
+    }
 
     public static String[] getLibNames(Element libNode)
     {
@@ -293,3 +403,25 @@ class NeedsStruct
     public String initClass = null;
     public long size = 0;
 };
+
+class SourcesBase
+{
+    public HashMap<String, Library> downloadedLibraries = new HashMap<String, Library>();
+    public HashMap<String, Library> availableLibraries = new HashMap<String, Library>();
+    public double qtVersion = 0x040800;
+    public String loaderClassName = null;
+    public HashMap<String, String> environmentVariables = new HashMap<String, String>();
+    ArrayList<String> applicationParams = new ArrayList<String>();
+}
+
+class SourcesCache extends SourcesBase
+{
+    public double version = -1;
+    static Object sync = new Object();
+    static SparseArray<SourcesCache> s_sourcesCache = new SparseArray<SourcesCache>();
+}
+
+class LibrariesStruct extends SourcesBase
+{
+    public SparseArray<SourcesCache> sourcesCache = new SparseArray<SourcesCache>();
+}

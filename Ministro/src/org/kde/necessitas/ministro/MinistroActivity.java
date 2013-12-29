@@ -469,7 +469,6 @@ public class MinistroActivity extends Activity
                 public void onCancel(DialogInterface dialog)
                 {
                     DownloadManager.this.cancel(false);
-                    finishMe(Session.Result.Canceled);
                 }
             });
             try
@@ -559,6 +558,7 @@ public class MinistroActivity extends Activity
                 {
                     if (isCancelled())
                         break;
+
                     synchronized (m_status)
                     {
                         m_status = params[i].name + " ";
@@ -588,22 +588,14 @@ public class MinistroActivity extends Activity
                         }
                 }
             }
-            catch (NoSuchAlgorithmException e)
-            {
-                e.printStackTrace();
-            }
-            catch (MalformedURLException e)
-            {
-                e.printStackTrace();
-            }
-            catch (IOException e)
-            {
-                e.printStackTrace();
-            }
             catch (Exception e)
             {
                 e.printStackTrace();
             }
+
+            if (isCancelled())
+                finishMe(Session.Result.Canceled);
+
             return null;
         }
 
@@ -637,7 +629,6 @@ public class MinistroActivity extends Activity
                 m_dialog.dismiss();
                 m_dialog = null;
             }
-            m_session.refreshLibraries(false);
             finishMe(Session.Result.Completed);
         }
     }
@@ -791,6 +782,10 @@ public class MinistroActivity extends Activity
                         if (oldLibs != null)
                             newLibs.putAll(oldLibs);
                         refreshLibraries = true;
+                        synchronized (SourcesCache.sync)
+                        {
+                            SourcesCache.s_sourcesCache.remove(sourceId);
+                        }
                     }
                 }
 
