@@ -17,35 +17,6 @@
 
 package org.kde.necessitas.ministro;
 
-import java.io.BufferedReader;
-import java.io.DataInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLConnection;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.cert.CertificateException;
-import java.security.cert.X509Certificate;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.concurrent.Semaphore;
-
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-
-import org.apache.http.client.ClientProtocolException;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -66,11 +37,40 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
-import android.os.PowerManager;
-import android.os.PowerManager.WakeLock;
 import android.os.StatFs;
 import android.provider.Settings;
 import android.util.Log;
+import android.view.WindowManager;
+
+import org.apache.http.client.ClientProtocolException;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+
+import java.io.BufferedReader;
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLConnection;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.concurrent.Semaphore;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 
 @SuppressLint("Wakelock")
 public class MinistroActivity extends Activity
@@ -86,7 +86,7 @@ public class MinistroActivity extends Activity
     private int m_id = -1;
     private Session m_session = null;
     private String m_rootPath = null;
-    private WakeLock m_wakeLock = null;
+//    private WakeLock m_wakeLock = null;
 
     private void checkNetworkAndDownload(final boolean update, boolean checkOnline)
     {
@@ -413,7 +413,7 @@ public class MinistroActivity extends Activity
             if (root.hasAttribute("features"))
                 supportedFeatures = root.getAttribute("features");
             connection = m_session.getLibsXmlUrl(sourceId, version + deviceSupportedFeatures(supportedFeatures)).openConnection();
-            String xmlFilePath = MinistroService.instance().getVersionXmlFile(sourceId, m_session.getRepository());
+            String xmlFilePath = Ministro.instance().getVersionXmlFile(sourceId, m_session.getRepository());
             new File(xmlFilePath).delete();
             FileOutputStream outstream = new FileOutputStream(xmlFilePath);
             InputStream instream = connection.getInputStream();
@@ -423,7 +423,7 @@ public class MinistroActivity extends Activity
                 outstream.write(tmp, 0, downloaded);
 
             outstream.close();
-            MinistroService.instance().createSourcePath(sourceId, m_session.getRepository());
+            Ministro.instance().createSourcePath(sourceId, m_session.getRepository());
             return version;
         }
         catch (ClientProtocolException e)
@@ -564,7 +564,7 @@ public class MinistroActivity extends Activity
                         m_status = params[i].name + " ";
                     }
                     publishProgress(0, m_totalProgressSize);
-                    String rootPath = MinistroService.instance().getLibsRootPath(params[i].sourceId, m_session.getRepository());
+                    String rootPath = Ministro.instance().getLibsRootPath(params[i].sourceId, m_session.getRepository());
                     if (!DownloadItem(params[i].url, rootPath, params[i].filePath, params[i].size, params[i].sha1))
                         break;
 
@@ -772,6 +772,7 @@ public class MinistroActivity extends Activity
                     return false;
 
                 boolean refreshLibraries = false;
+                ArrayList<Integer> sIds = new ArrayList<Integer>();
                 for (Integer sourceId : m_session.getSourcesIds())
                 {
                     // if is an update command or the xml file doesn't exists
@@ -782,15 +783,15 @@ public class MinistroActivity extends Activity
                         if (oldLibs != null)
                             newLibs.putAll(oldLibs);
                         refreshLibraries = true;
-                        synchronized (SourcesCache.sync)
-                        {
-                            SourcesCache.s_sourcesCache.remove(sourceId);
-                        }
+                        sIds.add(sourceId);
                     }
                 }
 
                 if (refreshLibraries)
+                {
+                    Ministro.instance().removeCache(sIds);
                     m_session.refreshLibraries(false);
+                }
 
                 if (!update[0])
                     m_session.checkModules(newLibs);

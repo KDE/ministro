@@ -37,11 +37,11 @@ import android.widget.Toast;
 public class MinistroConfigActivity extends Activity
 {
 
-    MinistroService m_service = null;
+    Ministro m_ministro = null;
 
     private void setupUI()
     {
-        if (m_service == null)
+        if (m_ministro == null)
         {
             finish();
             return;
@@ -50,13 +50,13 @@ public class MinistroConfigActivity extends Activity
         ArrayAdapter<CharSequence> repositories = ArrayAdapter.createFromResource(this, R.array.repositories, android.R.layout.simple_spinner_item);
         repositories.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         repositoriesSpinner.setAdapter(repositories);
-        repositoriesSpinner.setSelection(repositories.getPosition(m_service.getRepository()));
+        repositoriesSpinner.setSelection(repositories.getPosition(m_ministro.getRepository()));
         repositoriesSpinner.setOnItemSelectedListener(new OnItemSelectedListener()
         {
             public void onItemSelected(AdapterView<?> parent, View view, int pos, long id)
             {
                 Toast.makeText(parent.getContext(), getResources().getString(R.string.ministro_repository_msg, parent.getItemAtPosition(pos).toString()), Toast.LENGTH_SHORT).show();
-                m_service.setRepository(parent.getItemAtPosition(pos).toString());
+                m_ministro.setRepository(parent.getItemAtPosition(pos).toString());
             }
 
             public void onNothingSelected(AdapterView<?> arg0)
@@ -68,12 +68,12 @@ public class MinistroConfigActivity extends Activity
         ArrayAdapter<CharSequence> checkFrequency = ArrayAdapter.createFromResource(this, R.array.check_frequency, android.R.layout.simple_spinner_item);
         checkFrequency.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         checkFrequencySpinner.setAdapter(checkFrequency);
-        checkFrequencySpinner.setSelection(checkFrequency.getPosition(m_service.getCheckFrequency().toString()));
+        checkFrequencySpinner.setSelection(checkFrequency.getPosition(m_ministro.getCheckFrequency().toString()));
         checkFrequencySpinner.setOnItemSelectedListener(new OnItemSelectedListener()
         {
             public void onItemSelected(AdapterView<?> parent, View view, int pos, long id)
             {
-                m_service.setCheckFrequency(Long.parseLong(parent.getItemAtPosition(pos).toString()));
+                m_ministro.setCheckFrequency(Long.parseLong(parent.getItemAtPosition(pos).toString()));
             }
 
             public void onNothingSelected(AdapterView<?> arg0)
@@ -86,14 +86,14 @@ public class MinistroConfigActivity extends Activity
     {
         public void onServiceConnected(ComponentName name, IBinder service)
         {
-            m_service = MinistroService.instance();
+            m_ministro = Ministro.instance();
             setupUI();
         }
 
         public void onServiceDisconnected(ComponentName name)
         {
             m_ministroConnection = null;
-            m_service = null;
+            m_ministro = null;
         }
     };
 

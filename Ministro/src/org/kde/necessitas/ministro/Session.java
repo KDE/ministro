@@ -17,6 +17,16 @@
 
 package org.kde.necessitas.ministro;
 
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.os.Bundle;
+import android.util.Log;
+import android.util.SparseArray;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.net.MalformedURLException;
@@ -30,16 +40,6 @@ import java.util.Set;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-
-import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
-import android.os.Bundle;
-import android.util.Log;
-import android.util.SparseArray;
 
 public class Session
 {
@@ -96,10 +96,12 @@ public class Session
     private SparseArray<HashMap<String, Library>> m_downloadedLibrariesMap = new SparseArray<HashMap<String, Library>>();
     private int m_displayDPI = -1;
     private String[] m_themes = null;
+    private String[] m_users = null;
 
     private boolean m_onlyExtractStyleAndSsl = false;
     private boolean m_extractStyle = false;
 
+    private Ministro m_ministro = Ministro.instance();
     public boolean onlyExtractStyleAndSsl()
     {
         return m_onlyExtractStyleAndSsl;
@@ -112,12 +114,12 @@ public class Session
 
     public String getMinistroSslRootPath()
     {
-        return  m_service.getMinistroSslRootPath();
+        return  m_ministro.getMinistroSslRootPath();
     }
 
     public SharedPreferences getPreferences()
     {
-        return m_service.getPreferences();
+        return m_ministro.getPreferences();
     }
 
     public int getDisplayDPI()
@@ -130,18 +132,19 @@ public class Session
         return m_themes;
     }
 
-    public Session(MinistroService service, IMinistroCallback callback, Bundle parameters)
+    public Session(MinistroService service, IMinistroCallback callback, Bundle parameters, String[] users)
     {
         m_service = service;
         m_callback = callback;
         m_parameters = parameters;
+        m_users = users;
         m_displayDPI = m_service.getResources().getDisplayMetrics().densityDpi;
         if (!parameters.getBoolean(UPDATE_KEY, false))
-            m_sourcesIds = m_service.getSourcesIds(getSources());
+            m_sourcesIds = m_ministro.getSourcesIds(getSources());
         else
         {
             m_sourcesIds = new ArrayList<Integer>();
-            m_sourcesIds.addAll(m_service.getAllSourcesIds());
+            m_sourcesIds.addAll(Ministro.instance().getAllSourcesIds());
         }
         m_pathSeparator = System.getProperty("path.separator", ":");
         long startTime = System.currentTimeMillis();
@@ -159,7 +162,7 @@ public class Session
 
     private void setDeviceThemes(String[] themes)
     {
-        m_extractStyle = !new File(m_service.getMinistroStyleRootPath(m_displayDPI) + "style.json").exists();
+        m_extractStyle = !new File(m_ministro.getMinistroStyleRootPath(m_displayDPI) + "style.json").exists();
         ArrayList<String> deviceThemes = new ArrayList<String>();
         if (themes != null)
             for(String theme: themes)
@@ -167,7 +170,7 @@ public class Session
                 try {
                     android.R.style.class.getDeclaredField(theme);
                     deviceThemes.add(theme);
-                    m_extractStyle |= !new File(m_service.getMinistroStyleRootPath(m_displayDPI) + theme).exists();
+                    m_extractStyle |= !new File(m_ministro.getMinistroStyleRootPath(m_displayDPI) + theme).exists();
                 } catch (NoSuchFieldException e) {
                     e.printStackTrace();
                 }
@@ -205,7 +208,7 @@ public class Session
         else
             setDeviceThemes(null);
 
-        SharedPreferences preferences = m_service.getPreferences();
+        SharedPreferences preferences = m_ministro.getPreferences();
         try
         {
             m_extractStyle |= !preferences.getString(MINISTRO_VERSION, "").equals(m_service.getPackageManager().getPackageInfo(m_service.getPackageName(), 0).versionName);
@@ -271,7 +274,7 @@ public class Session
         Bundle loaderParams = checkModules(null);
 
         if (downloadMissingLibs && loaderParams.getInt(ERROR_CODE_KEY) == EC_NO_ERROR)
-            m_onlyExtractStyleAndSsl = m_extractStyle | !new File(m_service.getMinistroSslRootPath()).exists();
+            m_onlyExtractStyleAndSsl = m_extractStyle | !new File(m_ministro.getMinistroSslRootPath()).exists();
         else
             m_onlyExtractStyleAndSsl = false;
 
@@ -316,12 +319,12 @@ public class Session
         if (m_repository == null)
         {
             if (!m_parameters.containsKey(REPOSITORY_KEY))
-                m_repository = m_service.getRepository();
+                m_repository = m_ministro.getRepository();
             else
             {
                 m_repository = m_parameters.getString(REPOSITORY_KEY);
                 if (!m_repository.equals("stable") && !m_repository.equals("testing") && !m_repository.equals("unstable"))
-                    m_repository = m_service.getRepository();
+                    m_repository = m_ministro.getRepository();
             }
         }
         return m_repository;
@@ -334,18 +337,21 @@ public class Session
 
     URL getVersionsFileUrl(Integer sourceId) throws MalformedURLException
     {
-        return new URL(m_service.getSource(sourceId) + getRepository() + "/" + android.os.Build.CPU_ABI + "/android-" + android.os.Build.VERSION.SDK_INT + "/versions.xml");
+        return new URL(m_ministro.getSource(sourceId) + getRepository() + "/" + android.os.Build.CPU_ABI + "/android-" + android.os.Build.VERSION.SDK_INT + "/versions.xml");
     }
 
     URL getLibsXmlUrl(Integer sourceId, String version) throws MalformedURLException
     {
-        return new URL(m_service.getSource(sourceId) + getRepository() + "/" + android.os.Build.CPU_ABI + "/android-" + android.os.Build.VERSION.SDK_INT + "/libs-" + version + ".xml");
+        return new URL(m_ministro.getSource(sourceId) + getRepository() + "/" + android.os.Build.CPU_ABI + "/android-" + android.os.Build.VERSION.SDK_INT + "/libs-" + version + ".xml");
     }
 
     // this method reload all downloaded libraries
     void refreshLibraries(boolean checkCrc)
     {
-        m_libraries = m_service.refreshLibraries(m_sourcesIds, m_displayDPI, checkCrc);
+        m_libraries = m_ministro.refreshLibraries(m_sourcesIds, m_displayDPI, checkCrc);
+
+        if (m_users != null)
+            m_ministro.updateSourcesUsers(m_users, m_sourcesIds, m_parameters.getStringArray(REQUIRED_MODULES_KEY));
     }
 
     private SparseArray<Double> m_versions = new SparseArray<Double>();
@@ -374,11 +380,7 @@ public class Session
     */
     void retrievalFinished(Result res)
     {
-        synchronized (SourcesCache.sync)
-        {
-            for(int sourceId : m_sourcesIds)
-                SourcesCache.s_sourcesCache.remove(sourceId);
-        }
+        m_ministro.removeCache(m_sourcesIds);
         refreshLibraries(false);
         checkModulesImpl(false, res);
     }
@@ -424,7 +426,7 @@ public class Session
 
         try
         {
-            params.putString(LIB_PATH_KEY, m_service.getLibsRootPath(m_sourcesIds.get(0), getRepository()));
+            params.putString(LIB_PATH_KEY, m_ministro.getLibsRootPath(m_sourcesIds.get(0), getRepository()));
         }
         catch (Exception e)
         {
@@ -432,7 +434,7 @@ public class Session
         }
         ArrayList<String> paths = new ArrayList<String>();
         for (Integer id : m_sourcesIds)
-            paths.add(m_service.getLibsRootPath(id, getRepository()));
+            paths.add(m_ministro.getLibsRootPath(id, getRepository()));
         params.putStringArrayList(LIBS_PATH_KEY, paths);
         params.putString(ENVIRONMENT_VARIABLES_KEY, joinEnvironmentVariables());
         params.putString(APPLICATION_PARAMETERS_KEY, Library.join(m_libraries.applicationParams, "\t"));
@@ -500,13 +502,13 @@ public class Session
         {
             Module m = new Module();
             m.name = library.name;
-            m.path = m_service.getLibsRootPath(library.sourceId, getRepository()) + library.filePath;
+            m.path = m_ministro.getLibsRootPath(library.sourceId, getRepository()) + library.filePath;
             m.level = library.level;
             if (library.needs != null)
                 for (NeedsStruct needed : library.needs)
                 {
                     if (needed.type != null && needed.type.equals("jar"))
-                        jars.add(m_service.getLibsRootPath(library.sourceId, getRepository()) + needed.filePath);
+                        jars.add(m_ministro.getLibsRootPath(library.sourceId, getRepository()) + needed.filePath);
                     if (needed.initClass != null)
                         initClasses.add(needed.initClass);
                 }
@@ -605,7 +607,7 @@ public class Session
         try
         {
             HashMap<String, Library> oldLibs = m_downloadedLibrariesMap.get(sourceId);
-            File file = new File(m_service.getVersionXmlFile(sourceId, getRepository()));
+            File file = new File(m_ministro.getVersionXmlFile(sourceId, getRepository()));
             if (!file.exists() || oldLibs == null)
                 return null;
 
@@ -617,9 +619,9 @@ public class Session
             Node node = root.getFirstChild();
 
             HashMap<String, Library> newLibraries = new HashMap<String, Library>();
-            Library.loadLibs(node, m_service.getLibsRootPath(sourceId, getRepository()), sourceId, newLibraries, null, false);
+            Library.loadLibs(node, m_ministro.getLibsRootPath(sourceId, getRepository()), sourceId, newLibraries, null, false);
             HashMap<String, Library> changedLibs = new HashMap<String, Library>();
-            String rootPath = m_service.getLibsRootPath(sourceId, getRepository());
+            String rootPath = m_ministro.getLibsRootPath(sourceId, getRepository());
 
             for (String library : oldLibs.keySet())
             {

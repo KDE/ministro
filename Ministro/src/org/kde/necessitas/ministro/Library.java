@@ -17,6 +17,14 @@
 
 package org.kde.necessitas.ministro;
 
+import android.annotation.SuppressLint;
+import android.os.Bundle;
+import android.util.SparseArray;
+
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -25,14 +33,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
-
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-
-import android.annotation.SuppressLint;
-import android.os.Bundle;
-import android.util.SparseArray;
 
 class Library
 {
@@ -165,7 +165,7 @@ class Library
         }
     }
 
-    public static String[] getLibNames(Element libNode)
+    static String[] getLibNames(Element libNode)
     {
         if (libNode == null)
             return null;
@@ -183,7 +183,7 @@ class Library
         return libs.toArray(strings);
     }
 
-    public static NeedsStruct[] getNeeds(Element libNode)
+    static NeedsStruct[] getNeeds(Element libNode)
     {
         if (libNode == null)
             return null;
@@ -225,7 +225,7 @@ class Library
     }
 
     @SuppressLint("DefaultLocale")
-    public static Library getLibrary(Element libNode, boolean includeNeed) throws IOException
+    static Library getLibrary(Element libNode, boolean includeNeed) throws IOException
     {
         Library lib = new Library();
         // The following line may trow an exception if the file name is not good
@@ -282,7 +282,7 @@ class Library
         return lib;
     }
 
-    public static String convertToHex(byte[] data)
+    static String convertToHex(byte[] data)
     {
         StringBuffer buf = new StringBuffer();
         for (int i = 0; i < data.length; i++)
@@ -301,7 +301,7 @@ class Library
         return buf.toString();
     }
 
-    public static boolean checkCRC(String fileName, String sha1)
+    static boolean checkCRC(String fileName, String sha1)
     {
         try
         {
@@ -323,7 +323,7 @@ class Library
         return false;
     }
 
-    public static String mkdirParents(String rootPath, String filePath, int skip)
+    static String mkdirParents(String rootPath, String filePath, int skip)
     {
         String[] paths = filePath.split("/");
         String path = "";
@@ -339,7 +339,7 @@ class Library
         return rootPath + path;
     }
 
-    public static void removeAllFiles(String path, boolean recursive)
+    static void removeAllFiles(String path, boolean recursive)
     {
         File f = new File(path);
         if (!f.exists())
@@ -363,7 +363,14 @@ class Library
         }
     }
 
-    public static String join(Collection<String> s, String delimiter)
+    void remove()
+    {
+        new File(filePath).delete();
+        for (NeedsStruct ns : needs)
+            new File(ns.filePath).delete();
+    }
+
+    static String join(Collection<String> s, String delimiter)
     {
         if (s == null || s.isEmpty())
             return "";
@@ -376,7 +383,7 @@ class Library
         return builder.toString();
     }
 
-    public static void mergeBundleParameters(Bundle out, String outKey, Bundle in, String inKey)
+    static void mergeBundleParameters(Bundle out, String outKey, Bundle in, String inKey)
     {
         if (!in.containsKey(inKey))
             return;
@@ -417,8 +424,6 @@ class SourcesBase
 class SourcesCache extends SourcesBase
 {
     public double version = -1;
-    static Object sync = new Object();
-    static SparseArray<SourcesCache> s_sourcesCache = new SparseArray<SourcesCache>();
 }
 
 class LibrariesStruct extends SourcesBase

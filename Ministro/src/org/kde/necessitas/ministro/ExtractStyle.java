@@ -17,19 +17,6 @@
 
 package org.kde.necessitas.ministro;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.lang.reflect.Field;
-import java.util.ArrayList;
-
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-import org.xmlpull.v1.XmlPullParser;
-
 import android.content.Context;
 import android.content.res.ColorStateList;
 import android.content.res.Resources;
@@ -57,6 +44,19 @@ import android.util.AttributeSet;
 import android.util.Log;
 import android.util.Xml;
 import android.view.inputmethod.EditorInfo;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.xmlpull.v1.XmlPullParser;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.lang.reflect.Field;
+import java.util.ArrayList;
 
 
 public class ExtractStyle {
