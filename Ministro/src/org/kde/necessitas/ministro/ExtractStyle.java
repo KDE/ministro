@@ -377,7 +377,7 @@ public class ExtractStyle {
 
     void addDrawableItemIfNotExists(JSONObject json, ArrayList<Integer> list, Drawable item, String[] states, String filename)
     {
-        for(Integer it : list)
+        for (Integer it : list)
         {
             if (it.equals(item.hashCode()))
                 return;
@@ -396,8 +396,8 @@ public class ExtractStyle {
         int states[] = new int[c];
         String [] statesText = new String[c];
 
-        for(int n= 0;u > 0;++n, u>>= 1)
-                if((u & 1) > 0)
+        for (int n= 0;u > 0;++n, u>>= 1)
+                if ((u & 1) > 0)
                 {
                     statesText[pos]=DrawableStatesLabels[n];
                     states[pos++]=DrawableStates[n];
@@ -409,7 +409,7 @@ public class ExtractStyle {
     int bitCount(int u)
     {
         int n;
-        for(n= 0;u > 0;++n, u&= (u - 1));
+        for (n= 0;u > 0;++n, u&= (u - 1));
             return n;
     }
 
@@ -425,8 +425,8 @@ public class ExtractStyle {
             e.printStackTrace();
         }
         for (int c = 1;c<=DrawableStates.length;c++)
-            for(int u= 0;u < 1 << DrawableStates.length;u++)
-                if(bitCount(u) == c)
+            for (int u= 0;u < 1 << DrawableStates.length;u++)
+                if (bitCount(u) == c)
                     addSolution(filename, json, c, drawable, drawableList, u);
         return json;
     }
@@ -702,7 +702,8 @@ public class ExtractStyle {
                     } catch (JSONException e) {
                         e.printStackTrace();
                     }
-                    return json; 		    	}
+                    return json;
+                }
                 else
                 {
                     Drawable d = (Drawable) drawable;
