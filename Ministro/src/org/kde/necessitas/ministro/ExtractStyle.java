@@ -1281,7 +1281,7 @@ public class ExtractStyle {
 
     public ExtractStyle(Context context, String extractPath)
     {
-        Log.i(MinistroService.TAG, "Extract " + extractPath);
+        Log.i(Ministro.TAG, "Extract " + extractPath);
         m_extractPath = extractPath + "/";
         new File(m_extractPath).mkdirs();
         MinistroActivity.nativeChmode(m_extractPath, 0755);

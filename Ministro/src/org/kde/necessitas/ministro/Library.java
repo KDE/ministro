@@ -17,7 +17,6 @@
 
 package org.kde.necessitas.ministro;
 
-import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.util.SparseArray;
 
@@ -224,7 +223,6 @@ class Library
         return needs.toArray(_needs);
     }
 
-    @SuppressLint("DefaultLocale")
     static Library getLibrary(Element libNode, boolean includeNeed) throws IOException
     {
         Library lib = new Library();

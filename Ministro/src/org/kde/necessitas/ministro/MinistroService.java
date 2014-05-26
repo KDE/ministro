@@ -28,14 +28,6 @@ import android.util.SparseArray;
 
 public class MinistroService extends Service
 {
-    public static final String TAG = "MinistroService";
-
-    private static final String MINISTRO_CHECK_UPDATES_KEY = "LASTCHECK";
-    private static final String MINISTRO_CHECK_FREQUENCY_KEY = "CHECKFREQUENCY";
-    private static final String MINISTRO_REPOSITORY_KEY = "REPOSITORY";
-    private static final String MINISTRO_MIGRATED_KEY = "MIGRATED";
-    private static final String MINISTRO_DEFAULT_REPOSITORY = "stable";
-    private static final String MINISTRO_SOURCES_KEY = "SOURCES";
     private static final String MINISTRO_CHECK_CRC_KEY = "CHECK_CRC";
 
     private boolean m_checkCrc = true;

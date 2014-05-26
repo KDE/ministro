@@ -10,10 +10,10 @@
                 <category android:name="android.intent.category.VIEW" />
             </intent-filter>
         </activity>
-        <activity android:name="org.kde.necessitas.ministro.MinistroConfigActivity"
+        <activity android:name=".MinistroConfigActivity"
                 android:label="@string/app_name">
             <intent-filter>
-                <action android:name="org.kde.necessitas.ministro.MinistroConfigActivity" />
+                <action android:name=".MinistroConfigActivity" />
                 <category android:name="android.intent.category.VIEW" />
             </intent-filter>
         </activity>

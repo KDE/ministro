@@ -17,7 +17,6 @@
 
 package org.kde.necessitas.ministro;
 
-import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.NotificationManager;
@@ -72,7 +71,6 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
-@SuppressLint("Wakelock")
 public class MinistroActivity extends Activity
 {
     // 20 seconds for connection timeout
@@ -86,7 +84,6 @@ public class MinistroActivity extends Activity
     private int m_id = -1;
     private Session m_session = null;
     private String m_rootPath = null;
-//    private WakeLock m_wakeLock = null;
 
     private void checkNetworkAndDownload(final boolean update, boolean checkOnline)
     {
@@ -178,7 +175,6 @@ public class MinistroActivity extends Activity
     private final int freeSpaceCode = 0xf3ee500;
     private Semaphore m_diskSpaceSemaphore = new Semaphore(0);
 
-    @SuppressLint("InlinedApi")
     private boolean checkFreeSpace(final long size) throws InterruptedException
     {
         final StatFs stat = new StatFs(m_rootPath);

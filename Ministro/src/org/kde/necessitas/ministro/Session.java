@@ -150,13 +150,13 @@ public class Session
         long startTime = System.currentTimeMillis();
         refreshLibraries(m_service.checkCrc());
         long endTime = System.currentTimeMillis();
-        Log.i(MinistroService.TAG, "refreshLibraries took " + (endTime - startTime) + " ms");
+        Log.i(Ministro.TAG, "refreshLibraries took " + (endTime - startTime) + " ms");
         if (!parameters.getBoolean(UPDATE_KEY, false))
         {
             startTime = System.currentTimeMillis();
             checkModulesImpl(true, null);
             endTime = System.currentTimeMillis();
-            Log.i(MinistroService.TAG, "checkModulesImpl took " + (endTime - startTime) + " ms");
+            Log.i(Ministro.TAG, "checkModulesImpl took " + (endTime - startTime) + " ms");
         }
     }
 
@@ -199,7 +199,7 @@ public class Session
             {
                 e.printStackTrace();
             }
-            Log.e(MinistroService.TAG, "Invalid parameters: " + m_parameters.toString());
+            Log.e(Ministro.TAG, "Invalid parameters: " + m_parameters.toString());
             return;
         }
 
@@ -237,7 +237,7 @@ public class Session
                 {
                     e.printStackTrace();
                 }
-                Log.e(MinistroService.TAG, "Invalid qt verson");
+                Log.e(Ministro.TAG, "Invalid qt verson");
                 return;
             }
             m_parameters.putBoolean(QT_VERSION_PARAMETER_KEY, true);
@@ -261,7 +261,7 @@ public class Session
             {
                 e.printStackTrace();
             }
-            Log.e(MinistroService.TAG, "Ministro cannot satisfy API version: " + ministroApiLevel);
+            Log.e(Ministro.TAG, "Ministro cannot satisfy API version: " + ministroApiLevel);
             return;
         }
 
@@ -541,7 +541,7 @@ public class Session
             library = m_libraries.availableLibraries.get(module);
             if (library != null)
             {
-                Log.i(MinistroService.TAG, "Module '"+ module + "' not found");
+                Log.i(Ministro.TAG, "Module '"+ module + "' not found");
                 notFoundModules.put(module, library);
                 if (library.depends != null)
                     for (int depIt = 0; depIt < library.depends.length; depIt++)

@@ -27,6 +27,7 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.os.AsyncTask;
+import android.os.Handler;
 import android.util.Log;
 import android.util.SparseArray;
 
@@ -62,16 +63,19 @@ public class Ministro extends Application {
 
     private static final String MINISTRO_CHECK_UPDATES_KEY = "LASTCHECK";
     private static final String MINISTRO_CHECK_FREQUENCY_KEY = "CHECKFREQUENCY";
+    private static final String MINISTRO_CHECK_CLEANUP_KEY = "LASTCHECKCLEANUP";
+    private static final String MINISTRO_CHECK_CLEANUP_FREQUENCY_KEY = "CHECKFREQUENCYCLEANUP";
     private static final String MINISTRO_REPOSITORY_KEY = "REPOSITORY";
     private static final String MINISTRO_MIGRATED_KEY = "MIGRATED";
     private static final String MINISTRO_DEFAULT_REPOSITORY = "stable";
     private static final String MINISTRO_SOURCES_KEY = "SOURCES";
-    private static final String MINISTRO_CHECK_CRC_KEY = "CHECK_CRC";
 
     private HashMap<String, Integer> m_sources = new HashMap<String, Integer>();
     private String m_repository = null;
     private long m_lastCheckUpdates = 0;
-    private long m_checkFrequency = 7l * 24 * 3600 * 1000; // 7 days
+    private long m_checkUpdatesFrequency = 7l * 24 * 3600 * 1000; // 7 days
+    private long m_lastCheckCleanup = 0;
+    private long m_checkCleanupFrequency = 30l * 24 * 3600 * 1000; // 30 days
     private int m_nextId = 0;
     private String m_ministroRootPath = null;
 
@@ -314,6 +318,7 @@ public class Ministro extends Application {
         {
             m_repository = value;
             m_lastCheckUpdates = 0;
+            m_lastCheckCleanup = 0;
             saveSettings();
         }
     }
@@ -322,7 +327,7 @@ public class Ministro extends Application {
     {
         synchronized (this)
         {
-            return m_checkFrequency / (24 * 3600 * 1000);
+            return m_checkUpdatesFrequency / (24 * 3600 * 1000);
         }
     }
 
@@ -330,8 +335,9 @@ public class Ministro extends Application {
     {
         synchronized (this)
         {
-            m_checkFrequency = value * 24 * 3600 * 1000;
+            m_checkUpdatesFrequency = value * 24 * 3600 * 1000;
             m_lastCheckUpdates = 0;
+            m_lastCheckCleanup = 0;
             saveSettings();
         }
     }
@@ -346,6 +352,31 @@ public class Ministro extends Application {
     public Ministro()
     {
         m_instance = this;
+    }
+
+    private Runnable m_cleanupRunnable = new Runnable() {
+        @Override
+        public void run() {
+            cleanup();
+        }
+    };
+    String[] repositories = {"stable", "testing", "unstable"};
+    public void cleanup()
+    {
+        synchronized (this)
+        {
+            for (String sourceUrl : m_sources.keySet())
+            {
+                SourcesCache sc = m_sourcesCache.get(m_sources.get(sourceUrl));
+                if (sc != null)
+                {
+
+                }
+            }
+            m_lastCheckCleanup = System.currentTimeMillis();
+            saveSettings();
+        }
+        m_handler.postDelayed(m_cleanupRunnable, m_checkCleanupFrequency);
     }
 
     class CheckForUpdates extends AsyncTask<Void, Void, Boolean>
@@ -533,7 +564,11 @@ public class Ministro extends Application {
                 }
                 JSONObject json = new JSONObject(builder.toString());
                 m_lastCheckUpdates = json.getLong(MINISTRO_CHECK_UPDATES_KEY);
-                m_checkFrequency = json.getLong(MINISTRO_CHECK_FREQUENCY_KEY);
+                m_checkUpdatesFrequency = json.getLong(MINISTRO_CHECK_FREQUENCY_KEY);
+                if (json.has(MINISTRO_CHECK_CLEANUP_KEY))
+                    m_lastCheckCleanup = json.getLong(MINISTRO_CHECK_CLEANUP_KEY);
+                if (json.has(MINISTRO_CHECK_CLEANUP_FREQUENCY_KEY))
+                    m_checkCleanupFrequency = json.getLong(MINISTRO_CHECK_CLEANUP_FREQUENCY_KEY);
                 m_repository = json.getString(MINISTRO_REPOSITORY_KEY);
                 JSONArray sources = json.getJSONArray(MINISTRO_SOURCES_KEY);
                 m_sources.clear();
@@ -616,7 +651,9 @@ public class Ministro extends Application {
             {
                 JSONObject json = new JSONObject();
                 json.put(MINISTRO_CHECK_UPDATES_KEY, m_lastCheckUpdates);
-                json.put(MINISTRO_CHECK_FREQUENCY_KEY, m_checkFrequency);
+                json.put(MINISTRO_CHECK_FREQUENCY_KEY, m_checkUpdatesFrequency);
+                json.put(MINISTRO_CHECK_CLEANUP_KEY, m_lastCheckCleanup);
+                json.put(MINISTRO_CHECK_CLEANUP_FREQUENCY_KEY, m_checkCleanupFrequency);
                 json.put(MINISTRO_REPOSITORY_KEY, m_repository);
                 JSONArray sources = new JSONArray();
                 for (String url : m_sources.keySet())
@@ -652,7 +689,7 @@ public class Ministro extends Application {
             // Migrate settings
             SharedPreferences preferences = getPreferences();
             m_repository = preferences.getString(MINISTRO_REPOSITORY_KEY, MINISTRO_DEFAULT_REPOSITORY);
-            m_checkFrequency = preferences.getLong(MINISTRO_CHECK_FREQUENCY_KEY, 7l * 24 * 3600 * 1000);
+            m_checkUpdatesFrequency = preferences.getLong(MINISTRO_CHECK_FREQUENCY_KEY, 7l * 24 * 3600 * 1000);
             m_lastCheckUpdates = preferences.getLong(MINISTRO_CHECK_UPDATES_KEY, 0);//System.currentTimeMillis());
             SharedPreferences.Editor editor = preferences.edit();
             editor.remove(MINISTRO_REPOSITORY_KEY);
@@ -685,6 +722,7 @@ public class Ministro extends Application {
         return m_sources.values();
     }
 
+    Handler m_handler = new Handler();
     @Override
     public void onCreate()
     {
@@ -698,8 +736,13 @@ public class Ministro extends Application {
             migrateSettings();
         loadSettings();
 
+        long firstStart = m_checkCleanupFrequency - (System.currentTimeMillis() - m_lastCheckCleanup);
+        if (firstStart < 0)
+            firstStart = 0;
 
-        if (MinistroActivity.isOnline(this) && System.currentTimeMillis() - m_lastCheckUpdates > m_checkFrequency)
+        m_handler.postDelayed(m_cleanupRunnable, firstStart);
+
+        if (MinistroActivity.isOnline(this) && System.currentTimeMillis() - m_lastCheckUpdates > m_checkUpdatesFrequency)
         {
             m_lastCheckUpdates = System.currentTimeMillis();
             saveSettings();
