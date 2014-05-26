@@ -66,11 +66,11 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
-import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
 import android.os.StatFs;
 import android.provider.Settings;
 import android.util.Log;
+import android.view.WindowManager;
 
 @SuppressLint("Wakelock")
 public class MinistroActivity extends Activity
@@ -855,20 +855,13 @@ public class MinistroActivity extends Activity
         dir.mkdirs();
         nativeChmode(m_rootPath, 0755);
         bindService(new Intent("org.kde.necessitas.ministro.IMinistro"), m_ministroConnection, Context.BIND_AUTO_CREATE);
-        PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-        m_wakeLock = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK, "Ministro");
-        m_wakeLock.acquire();
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON, WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     }
 
     @Override
     protected void onDestroy()
     {
         super.onDestroy();
-        if (null != m_wakeLock)
-        {
-            m_wakeLock.release();
-            m_wakeLock = null;
-        }
         unbindService(m_ministroConnection);
     }
 
