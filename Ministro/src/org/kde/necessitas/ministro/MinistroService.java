@@ -313,7 +313,6 @@ public class MinistroService extends Service
             return res;
         }
 
-        @SuppressWarnings("deprecation")
         @Override
         protected void onPostExecute(Boolean result)
         {
