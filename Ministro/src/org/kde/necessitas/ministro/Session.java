@@ -403,8 +403,15 @@ public class Session
         Set<String> jars = new HashSet<String>();
         ArrayList<String> initClasses = new ArrayList<String>();
         for (String module : m_parameters.getStringArray(REQUIRED_MODULES_KEY))
+        {
             // don't stop on first error
-            res = res & addModules(module, libs, notFoundModules, jars, initClasses);
+            boolean r = addModules(module, libs, notFoundModules, jars, initClasses);
+            if ( !r )
+            {
+              Log.d( "Ministro", "Missing " + module );
+            }
+            res &= r;
+        }
 
         ArrayList<String> librariesArray = new ArrayList<String>();
         // sort all libraries
