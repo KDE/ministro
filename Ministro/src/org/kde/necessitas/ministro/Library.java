@@ -33,6 +33,7 @@ import org.w3c.dom.NodeList;
 import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.util.SparseArray;
+import android.util.Log;
 
 class Library
 {
@@ -43,7 +44,7 @@ class Library
     public NeedsStruct[] needs = null;
     public int level = 0;
     public long size = 0;
-    public boolean touched = false;
+    public int touched = 0;
 
     class LibraryVersion
     {
@@ -61,11 +62,14 @@ class Library
     // level to be invalid, so we must re-compute it.
     static void setLoadPriority(Library lib, HashMap<String, Library> libraries)
     {
-        if (lib.touched)
+        lib.touched++;
+
+        if (lib.touched > 10)
             return;
 
-        lib.touched = true;
-        lib.level = 0;
+        if (lib.touched == 1)
+            lib.level = 0;
+
         if (lib.depends != null)
         {
             for (String dep : lib.depends)
@@ -75,7 +79,10 @@ class Library
                 {
                     setLoadPriority(l, libraries);
                     if (lib.level <= l.level)
+                    {
+                        Log.d(MinistroService.TAG, "Increasing level of lib '" + lib.name + "' because of lib '" + l.name + "' (" + ( l.level + 1 ) + ")");
                         lib.level = l.level + 1;
+                    }
                 }
             }
         }
