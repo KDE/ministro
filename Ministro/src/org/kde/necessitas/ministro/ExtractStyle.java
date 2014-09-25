@@ -50,6 +50,7 @@ import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.GradientDrawable.Orientation;
+import android.graphics.drawable.InsetDrawable;
 import android.graphics.drawable.LayerDrawable;
 import android.graphics.drawable.NinePatchDrawable;
 import android.graphics.drawable.RotateDrawable;
@@ -458,7 +459,7 @@ public class ExtractStyle {
         }
         list.add(item.hashCode());
         try {
-            json.put(getStatesName(states), getDrawable(item, getFileName(filename, states)));
+            json.put(getStatesName(states), getDrawable(item, getFileName(filename, states), null));
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -485,24 +486,6 @@ public class ExtractStyle {
         int n;
         for (n= 0;u > 0;++n, u&= (u - 1));
             return n;
-    }
-
-    Object getStateListDrawable_old(Drawable drawable, String filename)
-    {
-        JSONObject json = new JSONObject();
-        ArrayList<Integer> drawableList= new ArrayList<Integer>();
-        drawable.setState(EMPTY_STATE_SET);
-        try {
-            json.put("empty", getDrawable(drawable.getCurrent(), filename));
-            drawableList.add(drawable.getCurrent().hashCode());
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-        for (int c = 1;c<=DrawableStates.length;c++)
-            for (int u= 0;u < 1 << DrawableStates.length;u++)
-                if (bitCount(u) == c)
-                    addSolution(filename, json, c, drawable, drawableList, u);
-        return json;
     }
 
     JSONObject getStatesList(int [] states) throws JSONException
@@ -584,7 +567,7 @@ public class ExtractStyle {
                 int id = layers.getId(i);
                 if (id == -1)
                     id = i;
-                JSONObject layerJsonObject=getDrawable(layers.getDrawable(i), filename+"__"+id);
+                JSONObject layerJsonObject=getDrawable(layers.getDrawable(i), filename+"__"+id, null);
                 layerJsonObject.put("id", id);
                 array.put(layerJsonObject);
             }
@@ -614,7 +597,7 @@ public class ExtractStyle {
                 if (states == null)
                     continue;
                 stateJson.put("states", getStatesList(states));
-                stateJson.put("drawable", getDrawable(d, filename+"__"+getStatesName(states)));
+                stateJson.put("drawable", getDrawable(d, filename+"__"+getStatesName(states), null));
                 array.put(stateJson);
             }
             json.put("type", "stateslist");
@@ -675,7 +658,7 @@ public class ExtractStyle {
             Class<?> rotateStateClass = obj.getClass();
             Field f = rotateStateClass.getDeclaredField("mDrawable");
             f.setAccessible(true);
-            json.put("drawable", getDrawable(f.get(obj), filename));
+            json.put("drawable", getDrawable(f.get(obj), filename, null));
             f = rotateStateClass.getDeclaredField("mPivotX");
             f.setAccessible(true);
             json.put("pivotX", f.getFloat(obj));
@@ -711,7 +694,7 @@ public class ExtractStyle {
             {
                 JSONObject frame = new JSONObject();
                 frame.put("duration", drawable.getDuration(i));
-                frame.put("drawable", getDrawable(drawable.getFrame(i), filename+"__"+i));
+                frame.put("drawable", getDrawable(drawable.getFrame(i), filename+"__"+i, null));
                 frames.put(frame);
             }
             json.put("frames", frames);
@@ -792,7 +775,7 @@ public class ExtractStyle {
     }
     private HashMap<String, DrawableCache> m_drawableCache = new HashMap<String, DrawableCache>();
 
-    public JSONObject getDrawable(Object drawable, String filename)
+    public JSONObject getDrawable(Object drawable, String filename, Rect padding)
     {
         DrawableCache dc = m_drawableCache.get(filename);
         if (dc != null)
@@ -803,7 +786,7 @@ public class ExtractStyle {
                 Log.e(MinistroService.TAG, "Different drawable objects points to the same file name \"" + filename +"\"");
         }
         JSONObject json = new JSONObject();
-        Bitmap bmp;
+        Bitmap bmp = null;
         if (drawable instanceof Bitmap)
             bmp = (Bitmap) drawable;
         else
@@ -814,7 +797,7 @@ public class ExtractStyle {
             {
                 if (drawable instanceof ScaleDrawable)
                 {
-                    return getDrawable(((ScaleDrawable)drawable).getDrawable(), filename);
+                    return getDrawable(((ScaleDrawable)drawable).getDrawable(), filename, null);
                 }
                 if (drawable instanceof LayerDrawable)
                 {
@@ -843,10 +826,14 @@ public class ExtractStyle {
                         Drawable.ConstantState dcs = ((ClipDrawable)drawable).getConstantState();
                         Field f = dcs.getClass().getDeclaredField("mDrawable");
                         f.setAccessible(true);
-                        json.put("drawable", getDrawable(f.get(dcs), filename));
-                        Rect padding = new Rect();
-                        if (((Drawable) drawable).getPadding(padding))
+                        json.put("drawable", getDrawable(f.get(dcs), filename, null));
+                        if (null != padding)
                             json.put("padding", getJsonRect(padding));
+                        else {
+                            Rect _padding = new Rect();
+                            if (((Drawable) drawable).getPadding(_padding))
+                                json.put("padding", getJsonRect(_padding));
+                        }
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
@@ -858,16 +845,36 @@ public class ExtractStyle {
                     Drawable d = (Drawable) drawable;
                     d.setBounds(0, 0, 1, 1);
                     d.draw(new Canvas(bmp));
-                    Rect padding = new Rect();
                     try {
                         json.put("type", "color");
                         json.put("color", bmp.getPixel(0, 0));
-                        if (d.getPadding(padding))
+                        if (null != padding)
                             json.put("padding", getJsonRect(padding));
+                        else {
+                            Rect _padding = new Rect();
+                            if (d.getPadding(_padding))
+                                json.put("padding", getJsonRect(_padding));
+                        }
                     } catch (JSONException e) {
                         e.printStackTrace();
                     }
                     return json;
+                }
+                if (drawable instanceof InsetDrawable)
+                {
+                    try {
+                        InsetDrawable d = (InsetDrawable)drawable;
+                        Field mInsetState = d.getClass().getDeclaredField("mInsetState");
+                        mInsetState.setAccessible(true);
+                        Object mInsetStateObject = mInsetState.get(drawable);
+                        Field mDrawable = mInsetStateObject.getClass().getDeclaredField("mDrawable");
+                        mDrawable.setAccessible(true);
+                        Rect _padding = new Rect();
+                        boolean hasPadding = d.getPadding(_padding);
+                        return getDrawable(mDrawable.get(mInsetStateObject), filename, hasPadding ? _padding : null);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                 }
                 else
                 {
@@ -888,10 +895,15 @@ public class ExtractStyle {
                         NinePatchDrawable npd = (NinePatchDrawable) drawable;
                         try {
                             json.put("type", "9patch");
-                            json.put("drawable", getDrawable(bmp, filename));
-                            Rect padding = new Rect();
-                            if (npd.getPadding(padding))
+                            json.put("drawable", getDrawable(bmp, filename, null));
+                            if (padding != null)
                                 json.put("padding", getJsonRect(padding));
+                            else {
+                                Rect _padding = new Rect();
+                                if (npd.getPadding(_padding))
+                                    json.put("padding", getJsonRect(_padding));
+                            }
+
                             json.put("chunkInfo", findPatchesMarings(d));
                             return json;
                         } catch (Exception e) {
@@ -940,7 +952,7 @@ public class ExtractStyle {
             for (int i = 0; i < N; i++) {
                 int attr = a.getIndex(i);
                 if (attr == View_background)
-                    json.put("View_background", getDrawable(a.getDrawable(attr), styleName + "_View_background"));
+                    json.put("View_background", getDrawable(a.getDrawable(attr), styleName + "_View_background", null));
                 else if (attr == View_padding)
                     json.put("View_padding", a.getDimensionPixelSize(attr, -1));
                 else if (attr == View_paddingLeft)
@@ -996,13 +1008,13 @@ public class ExtractStyle {
                 else if (attr == View_scrollbarSize)
                     json.put("View_scrollbarSize", a.getDimensionPixelSize(attr, -1));
                 else if (attr == View_scrollbarThumbHorizontal)
-                    json.put("View_scrollbarThumbHorizontal", getDrawable(a.getDrawable(attr), styleName + "_View_scrollbarThumbHorizontal"));
+                    json.put("View_scrollbarThumbHorizontal", getDrawable(a.getDrawable(attr), styleName + "_View_scrollbarThumbHorizontal", null));
                 else if (attr == View_scrollbarThumbVertical)
-                    json.put("View_scrollbarThumbVertical", getDrawable(a.getDrawable(attr), styleName + "_View_scrollbarThumbVertical"));
+                    json.put("View_scrollbarThumbVertical", getDrawable(a.getDrawable(attr), styleName + "_View_scrollbarThumbVertical", null));
                 else if (attr == View_scrollbarTrackHorizontal)
-                    json.put("View_scrollbarTrackHorizontal", getDrawable(a.getDrawable(attr), styleName + "_View_scrollbarTrackHorizontal"));
+                    json.put("View_scrollbarTrackHorizontal", getDrawable(a.getDrawable(attr), styleName + "_View_scrollbarTrackHorizontal", null));
                 else if (attr == View_scrollbarTrackVertical)
-                    json.put("View_scrollbarTrackVertical", getDrawable(a.getDrawable(attr), styleName + "_View_scrollbarTrackVertical"));
+                    json.put("View_scrollbarTrackVertical", getDrawable(a.getDrawable(attr), styleName + "_View_scrollbarTrackVertical", null));
                 else if (attr == View_isScrollContainer)
                     json.put("View_isScrollContainer", a.getBoolean(attr, false));
                 else if (attr == View_keepScreenOn)
@@ -1157,21 +1169,21 @@ public class ExtractStyle {
                 else if (attr == TextView_linksClickable)
                     json.put("TextView_linksClickable", a.getBoolean(attr, true));
                 else if (attr == TextView_drawableLeft)
-                    json.put("TextView_drawableLeft", getDrawable(a.getDrawable(attr), styleName + "_TextView_drawableLeft"));
+                    json.put("TextView_drawableLeft", getDrawable(a.getDrawable(attr), styleName + "_TextView_drawableLeft", null));
                 else if (attr == TextView_drawableTop)
-                    json.put("TextView_drawableTop", getDrawable(a.getDrawable(attr), styleName + "_TextView_drawableTop"));
+                    json.put("TextView_drawableTop", getDrawable(a.getDrawable(attr), styleName + "_TextView_drawableTop", null));
                 else if (attr == TextView_drawableRight)
-                    json.put("TextView_drawableRight", getDrawable(a.getDrawable(attr), styleName + "_TextView_drawableRight"));
+                    json.put("TextView_drawableRight", getDrawable(a.getDrawable(attr), styleName + "_TextView_drawableRight", null));
                 else if (attr == TextView_drawableBottom)
-                    json.put("TextView_drawableBottom", getDrawable(a.getDrawable(attr), styleName + "_TextView_drawableBottom"));
+                    json.put("TextView_drawableBottom", getDrawable(a.getDrawable(attr), styleName + "_TextView_drawableBottom", null));
                 else if (attr == TextView_drawableStart)
-                    json.put("TextView_drawableStart", getDrawable(a.getDrawable(attr), styleName + "_TextView_drawableStart"));
+                    json.put("TextView_drawableStart", getDrawable(a.getDrawable(attr), styleName + "_TextView_drawableStart", null));
                 else if (attr == TextView_drawableEnd)
-                    json.put("TextView_drawableEnd", getDrawable(a.getDrawable(attr), styleName + "_TextView_drawableEnd"));
+                    json.put("TextView_drawableEnd", getDrawable(a.getDrawable(attr), styleName + "_TextView_drawableEnd", null));
                 else if (attr == TextView_drawablePadding)
                     json.put("TextView_drawablePadding", a.getDimensionPixelSize(attr, 0));
                 else if (attr == TextView_textCursorDrawable)
-                    json.put("TextView_textCursorDrawable", getDrawable(m_context.getResources().getDrawable(a.getResourceId(attr, 0)), styleName + "_TextView_textCursorDrawable"));
+                    json.put("TextView_textCursorDrawable", getDrawable(m_context.getResources().getDrawable(a.getResourceId(attr, 0)), styleName + "_TextView_textCursorDrawable", null));
                 else if (attr == TextView_maxLines)
                     json.put("TextView_maxLines", a.getInt(attr, -1));
                 else if (attr == TextView_maxHeight)
@@ -1261,11 +1273,11 @@ public class ExtractStyle {
                 else if (attr == TextView_privateImeOptions)
                     json.put("TextView_privateImeOptions", a.getString(attr));
                 else if (attr == TextView_textSelectHandleLeft && styleName.equals("textViewStyle"))
-                    json.put("TextView_textSelectHandleLeft", getDrawable(m_context.getResources().getDrawable(a.getResourceId(attr, 0)), styleName + "_TextView_textSelectHandleLeft"));
+                    json.put("TextView_textSelectHandleLeft", getDrawable(m_context.getResources().getDrawable(a.getResourceId(attr, 0)), styleName + "_TextView_textSelectHandleLeft", null));
                 else if (attr == TextView_textSelectHandleRight  && styleName.equals("textViewStyle"))
-                    json.put("TextView_textSelectHandleRight", getDrawable(m_context.getResources().getDrawable(a.getResourceId(attr, 0)), styleName + "_TextView_textSelectHandleRight"));
+                    json.put("TextView_textSelectHandleRight", getDrawable(m_context.getResources().getDrawable(a.getResourceId(attr, 0)), styleName + "_TextView_textSelectHandleRight", null));
                 else if (attr == TextView_textSelectHandle  && styleName.equals("textViewStyle"))
-                    json.put("TextView_textSelectHandle", getDrawable(m_context.getResources().getDrawable(a.getResourceId(attr, 0)), styleName + "_TextView_textSelectHandle"));
+                    json.put("TextView_textSelectHandle", getDrawable(m_context.getResources().getDrawable(a.getResourceId(attr, 0)), styleName + "_TextView_textSelectHandle", null));
                 else if (attr == TextView_textIsSelectable)
                     json.put("TextView_textIsSelectable", a.getBoolean(attr, false));
                 else if (attr == TextView_textAllCaps)
@@ -1314,7 +1326,7 @@ public class ExtractStyle {
             TypedArray a =m_theme.obtainStyledAttributes(null, imageViewAttrs, styleId, 0);
             Drawable d = a.getDrawable(ImageView_src);
             if (d != null)
-                json.put("ImageView_src", getDrawable(d, styleName + "_ImageView_src"));
+                json.put("ImageView_src", getDrawable(d, styleName + "_ImageView_src", null));
 
             json.put("ImageView_baselineAlignBottom", a.getBoolean(ImageView_baselineAlignBottom, false));
             json.put("ImageView_adjustViewBounds", a.getBoolean(ImageView_adjustViewBounds, false));
@@ -1354,7 +1366,7 @@ public class ExtractStyle {
 
             Drawable d = a.getDrawable(getField(styleableClass,"CompoundButton_button"));
             if (d != null)
-                json.put("CompoundButton_button", getDrawable(d, styleName + "_CompoundButton_button"));
+                json.put("CompoundButton_button", getDrawable(d, styleName + "_CompoundButton_button", null));
 
             a.recycle();
             jsonWriter.name(styleName).value(json);
@@ -1391,11 +1403,11 @@ public class ExtractStyle {
 
             Drawable d = a.getDrawable(getField(styleableClass,"ProgressBar_progressDrawable"));
             if (d != null)
-                json.put("ProgressBar_progressDrawable", getDrawable(d, styleName + "_ProgressBar_progressDrawable"));
+                json.put("ProgressBar_progressDrawable", getDrawable(d, styleName + "_ProgressBar_progressDrawable", null));
 
             d = a.getDrawable(getField(styleableClass,"ProgressBar_indeterminateDrawable"));
             if (d != null)
-                json.put("ProgressBar_indeterminateDrawable", getDrawable(d, styleName + "_ProgressBar_indeterminateDrawable"));
+                json.put("ProgressBar_indeterminateDrawable", getDrawable(d, styleName + "_ProgressBar_indeterminateDrawable", null));
 
             a.recycle();
         } catch (Exception e) {
@@ -1429,7 +1441,7 @@ public class ExtractStyle {
 
             Drawable d = a.getDrawable(getField(styleableClass,"SeekBar_thumb"));
             if (d != null)
-                json.put("SeekBar_thumb", getDrawable(d, styleName + "_SeekBar_thumb"));
+                json.put("SeekBar_thumb", getDrawable(d, styleName + "_SeekBar_thumb", null));
 
             try {
                 json.put("SeekBar_thumbOffset", styleableClass.getDeclaredField("SeekBar_thumbOffset").getInt(null));
@@ -1456,11 +1468,11 @@ public class ExtractStyle {
 
             Drawable thumb = a.getDrawable(getField(styleableClass,"Switch_thumb"));
             if (thumb != null)
-                json.put("Switch_thumb", getDrawable(thumb, styleName + "_Switch_thumb"));
+                json.put("Switch_thumb", getDrawable(thumb, styleName + "_Switch_thumb", null));
 
             Drawable track = a.getDrawable(getField(styleableClass,"Switch_track"));
             if (track != null)
-                json.put("Switch_track", getDrawable(track, styleName + "_Switch_track"));
+                json.put("Switch_track", getDrawable(track, styleName + "_Switch_track", null));
 
             int textAppearance = a.getResourceId(styleableClass.getDeclaredField("Switch_switchTextAppearance").getInt(null), -1);
             json.put("Switch_switchTextAppearance", extractTextAppearance(textAppearance));
@@ -1490,7 +1502,7 @@ public class ExtractStyle {
 
             Drawable d = a.getDrawable(getField(styleableClass,"CheckedTextView_checkMark"));
             if (d != null)
-                json.put("CheckedTextView_checkMark", getDrawable(d, itemName+"_CheckedTextView_checkMark"));
+                json.put("CheckedTextView_checkMark", getDrawable(d, itemName+"_CheckedTextView_checkMark", null));
 
             a.recycle();
         } catch (Exception e) {
@@ -1557,7 +1569,7 @@ public class ExtractStyle {
 
             Drawable divider = a.getDrawable(getField(styleableClass,"ListView_divider"));
             if (divider != null)
-                json.put("ListView_divider", getDrawable(divider, styleName + "_ListView_divider"));
+                json.put("ListView_divider", getDrawable(divider, styleName + "_ListView_divider", null));
 
             json.put("ListView_dividerHeight", a.getDimensionPixelSize(getField(styleableClass, "ListView_dividerHeight"), 0));
 
@@ -1580,7 +1592,7 @@ public class ExtractStyle {
 
             Drawable d = a.getDrawable(getField(styleableClass,"CalendarView_selectedDateVerticalBar"));
             if (d != null)
-                json.put("CalendarView_selectedDateVerticalBar", getDrawable(d, styleName + "_CalendarView_selectedDateVerticalBar"));
+                json.put("CalendarView_selectedDateVerticalBar", getDrawable(d, styleName + "_CalendarView_selectedDateVerticalBar", null));
 
             int dateTextAppearance = a.getResourceId(styleableClass.getDeclaredField("CalendarView_dateTextAppearance").getInt(null), -1);
             json.put("CalendarView_dateTextAppearance", extractTextAppearance(dateTextAppearance));
@@ -1616,19 +1628,19 @@ public class ExtractStyle {
 
             Drawable d = a.getDrawable(getField(styleableClass,"ActionBar_background"));
             if (d != null)
-                json.put("ActionBar_background", getDrawable(d, styleName + "_ActionBar_background"));
+                json.put("ActionBar_background", getDrawable(d, styleName + "_ActionBar_background", null));
 
             d = a.getDrawable(getField(styleableClass,"ActionBar_backgroundStacked"));
             if (d != null)
-                json.put("ActionBar_backgroundStacked", getDrawable(d, styleName + "_ActionBar_backgroundStacked"));
+                json.put("ActionBar_backgroundStacked", getDrawable(d, styleName + "_ActionBar_backgroundStacked", null));
 
             d = a.getDrawable(getField(styleableClass,"ActionBar_backgroundSplit"));
             if (d != null)
-                json.put("ActionBar_backgroundSplit", getDrawable(d, styleName + "_ActionBar_backgroundSplit"));
+                json.put("ActionBar_backgroundSplit", getDrawable(d, styleName + "_ActionBar_backgroundSplit", null));
 
             d = a.getDrawable(getField(styleableClass,"ActionBar_divider"));
             if (d != null)
-                json.put("ActionBar_divider", getDrawable(d, styleName + "_ActionBar_divider"));
+                json.put("ActionBar_divider", getDrawable(d, styleName + "_ActionBar_divider", null));
 
             json.put("ActionBar_itemPadding", a.getDimensionPixelSize(getField(styleableClass, "ActionBar_itemPadding"), 0));
 
@@ -1651,7 +1663,7 @@ public class ExtractStyle {
 
             Drawable d = a.getDrawable(getField(styleableClass,"LinearLayout_divider"));
             if (d != null)
-                json.put("LinearLayout_divider", getDrawable(d, styleName + "_LinearLayout_divider"));
+                json.put("LinearLayout_divider", getDrawable(d, styleName + "_LinearLayout_divider", null));
             json.put("LinearLayout_showDividers", a.getInt(getField(styleableClass, "LinearLayout_showDividers"), 0));
             json.put("LinearLayout_dividerPadding", a.getDimensionPixelSize(getField(styleableClass, "LinearLayout_dividerPadding"), 0));
 
@@ -1673,14 +1685,14 @@ public class ExtractStyle {
             TypedArray a = m_theme.obtainStyledAttributes(null, windowAttrs, backgroundId, 0);
             Drawable background = a.getDrawable(getField(styleableClass, "Window_windowBackground"));
             if (background != null)
-                json.put("Window_windowBackground", getDrawable(background, styleName + "_Window_windowBackground"));
+                json.put("Window_windowBackground", getDrawable(background, styleName + "_Window_windowBackground", null));
             a.recycle();
 
             int frameId = attrClass.getDeclaredField("windowFrame").getInt(null);
             a = m_theme.obtainStyledAttributes(null, windowAttrs, frameId, 0);
             Drawable frame = a.getDrawable(getField(styleableClass, "Window_windowFrame"));
             if (frame != null)
-                json.put("Window_windowFrame", getDrawable(frame, styleName + "_Window_windowFrame"));
+                json.put("Window_windowFrame", getDrawable(frame, styleName + "_Window_windowFrame", null));
             a.recycle();
 
             writer.name(styleName).value(json);
