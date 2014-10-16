@@ -80,7 +80,7 @@ public class Session
 
     // used to check Ministro Service compatibility
     private static final int MINISTRO_MIN_API_LEVEL = 1;
-    private static final int MINISTRO_MAX_API_LEVEL = 4;
+    private static final int MINISTRO_MAX_API_LEVEL = 5;
 
     public static final String[] NECESSITAS_SOURCE = { "https://files.kde.org/necessitas/ministro/android/necessitas/" };
     public static final String MINISTRO_VERSION = "MINISTRO_VERSION";
