@@ -1765,6 +1765,23 @@ public class ExtractStyle {
         }
     }
 
+    private JSONObject extractDefaultPalette()
+    {
+        TypedArray array = m_theme.obtainStyledAttributes(new int[]{
+                android.R.attr.textAppearance
+        });
+        int pos = 0;
+        JSONObject json = extractTextAppearance(array.getResourceId(pos++, -1));
+        try {
+            json.put("defaultBackgroundColor", defaultBackgroundColor);
+            json.put("defaultTextColorPrimary", defaultTextColor);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        array.recycle();
+        return json;
+    }
+
     public ExtractStyle(Context context, String extractPath)
     {
         long startTime = System.currentTimeMillis();
@@ -1777,9 +1794,13 @@ public class ExtractStyle {
         TypedArray array = m_theme.obtainStyledAttributes(new int[]{
                 android.R.attr.colorBackground,
                 android.R.attr.textColorPrimary,
+                android.R.attr.textColor
         });
         defaultBackgroundColor = array.getColor(0, 0);
-        defaultTextColor = array.getColor(1, 0xFFFFFF);
+        int textColor = array.getColor(1, 0xFFFFFF);
+        if (textColor == 0xFFFFFF)
+            textColor = array.getColor(2, 0xFFFFFF);
+        defaultTextColor = textColor;
         array.recycle();
 
         try
@@ -1787,6 +1808,7 @@ public class ExtractStyle {
           SimpleJsonWriter jsonWriter = new SimpleJsonWriter(m_extractPath+"style.json");
           jsonWriter.beginObject();
           try {
+              jsonWriter.name("defaultStyle").value(extractDefaultPalette());
               extractWindow(jsonWriter, "windowStyle");
               jsonWriter.name("buttonStyle").value(extractTextAppearanceInformations("buttonStyle", "QPushButton", null, -1));
               jsonWriter.name("spinnerStyle").value(extractTextAppearanceInformations("spinnerStyle", "QComboBox", null, -1));
