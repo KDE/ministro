@@ -34,6 +34,9 @@ import android.widget.ArrayAdapter;
 import android.widget.Spinner;
 import android.widget.Toast;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+
 public class MinistroConfigActivity extends Activity
 {
 
@@ -101,7 +104,7 @@ public class MinistroConfigActivity extends Activity
     protected void onCreate(Bundle savedInstanceState)
     {
         setContentView(R.layout.repoconfig);
-        bindService(new Intent("org.kde.necessitas.ministro.IMinistro"), m_ministroConnection, Context.BIND_AUTO_CREATE);
+        bindService(new Intent(this, MinistroService.class), m_ministroConnection, Context.BIND_AUTO_CREATE);
         super.onCreate(savedInstanceState);
     }
 
@@ -127,7 +130,16 @@ public class MinistroConfigActivity extends Activity
         // the next two lines initialize the Notification, using the
         // configurations above
         Notification notification = new Notification(icon, tickerText, when);
-        notification.setLatestEventInfo(context, contentTitle, contentText, contentIntent);
+        try {
+            Method deprecatedMethod = notification.getClass().getMethod("setLatestEventInfo", Context.class, CharSequence.class, CharSequence.class, PendingIntent.class);
+            deprecatedMethod.invoke(notification, context, contentTitle, contentText, contentIntent);
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        }
         notification.defaults |= Notification.DEFAULT_SOUND;
         notification.defaults |= Notification.DEFAULT_VIBRATE;
         notification.defaults |= Notification.DEFAULT_LIGHTS;

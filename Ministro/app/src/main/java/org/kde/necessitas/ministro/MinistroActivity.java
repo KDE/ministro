@@ -42,7 +42,6 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
-import org.apache.http.client.ClientProtocolException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
@@ -425,10 +424,6 @@ public class MinistroActivity extends Activity
             outstream.close();
             MinistroService.instance().createSourcePath(sourceId, m_session.getRepository());
             return version;
-        }
-        catch (ClientProtocolException e)
-        {
-            e.printStackTrace();
         }
         catch (IOException e)
         {
@@ -854,7 +849,7 @@ public class MinistroActivity extends Activity
         File dir = new File(m_rootPath);
         dir.mkdirs();
         nativeChmode(m_rootPath, 0755);
-        bindService(new Intent("org.kde.necessitas.ministro.IMinistro"), m_ministroConnection, Context.BIND_AUTO_CREATE);
+        bindService(new Intent(this, MinistroService.class), m_ministroConnection, Context.BIND_AUTO_CREATE);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON, WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     }
 

@@ -4,3 +4,4 @@ obj
 gen
 .*
 project.properties
+local.properties

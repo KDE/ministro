@@ -1972,6 +1972,7 @@ public class ExtractStyle {
         return json;
     }
 
+    @SuppressWarnings("ResourceType")
     public ExtractStyle(Context context, String extractPath)
     {
         long startTime = System.currentTimeMillis();
@@ -1990,6 +1991,7 @@ public class ExtractStyle {
         int textColor = array.getColor(1, 0xFFFFFF);
         if (textColor == 0xFFFFFF)
             textColor = array.getColor(2, 0xFFFFFF);
+
         defaultTextColor = textColor;
         array.recycle();
 
