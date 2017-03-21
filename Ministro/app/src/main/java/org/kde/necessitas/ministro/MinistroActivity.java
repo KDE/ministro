@@ -412,6 +412,8 @@ public class MinistroActivity extends Activity
             if (root.hasAttribute("features"))
                 supportedFeatures = root.getAttribute("features");
             connection = m_session.getLibsXmlUrl(sourceId, version + deviceSupportedFeatures(supportedFeatures)).openConnection();
+            connection.setConnectTimeout(CONNECTION_TIMEOUT);
+            connection.setReadTimeout(READ_TIMEOUT);
             String xmlFilePath = MinistroService.instance().getVersionXmlFile(sourceId, m_session.getRepository());
             new File(xmlFilePath).delete();
             FileOutputStream outstream = new FileOutputStream(xmlFilePath);
@@ -513,7 +515,7 @@ public class MinistroActivity extends Activity
                     if (sha1.equalsIgnoreCase(fileSha1))
                     {
                         outstream.close();
-                        nativeChmode(filePath, 0644);
+                        nativeChmode(filePath, filePath.endsWith(".so") ? 0755 : 0644);
                         return true;
                     }
                     else

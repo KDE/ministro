@@ -703,6 +703,8 @@ public class MinistroService extends Service
         m_handler = new Handler();
         try {
             m_ministroRootPath = getFilesDir().getCanonicalPath() + "/";
+            MinistroActivity.nativeChmode(getFilesDir().getParentFile().getCanonicalPath(), 0755);
+            MinistroActivity.nativeChmode(getFilesDir().getCanonicalPath(), 0755);
         } catch (IOException e) {
             e.printStackTrace();
         }
